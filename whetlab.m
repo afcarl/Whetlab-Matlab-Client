@@ -1,7 +1,7 @@
 classdef whetlab
     
     % A Whetlab tuning experiment.
-
+    %
     % A name and description for the experiment must be specified.
     % A Whetlab access token must also be provided.
     % The parameters to tune in the experiment are specified by
@@ -10,24 +10,24 @@ classdef whetlab
     % provide information about these parameters. Each of these
     % ``struct`` should contain the appropriate keys to properly describe
     % the parameter:
-    
+    %
     % * ``'type'``: type of the parameter (default: ``'float'``)
     % * ``'min'``: minimum value of the parameter
     % * ``'max'``: maximum value of the parameter
     % * ``'size'``: size of parameter (default: ``1``)
     % * ``'units'``: units (``str``) in which the parameter is measured
     % * ``'scale'``: scale to use when exploring parameter values (default: ``'linear'``)
-
+    %
     % Outcome should also be a ``struct``, describing the outcome. It
     % should have the fields:
-
+    %
     % * ``'name'``: name (``str``) for the outcome being optimized
     % * ``'type'``: type of the outcome (default: ``'float'``)
-
+    %
     % Finally, experiments can be resumed from a previous state.
     % To do so, ``name`` must match a previously created experiment
     % and argument ``resume`` must be set to ``True`` (default is ``False``).
-
+    %
     % :param name: Name of the experiment.
     % :type name: str
     % :param description: Description of the experiment.
@@ -40,9 +40,9 @@ classdef whetlab
     % :type outcome: struct
     % :param resume: Whether to resume a previously executed experiment. If True, ``parameters`` and ``outcome`` are ignored.
     % :type resume: bool
-
+    %
     % A Whetlab experiment instance will have the following variables:
-
+    %
     % :ivar parameters: Parameters to be tuned during the experiment.
     % :type parameters: struct
     % :ivar outcome: Description of the outcome to maximize.
@@ -121,7 +121,7 @@ classdef whetlab
         else
             % Create new experiment
             user = 4;
-            res = self.client.experiments().create(name,description,user);
+            res = self.client.experiments().create(name,description,user,struct());
             experiment_id = res.body.('id');
             self.experiment_id = experiment_id;
 
