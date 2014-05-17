@@ -127,7 +127,7 @@ classdef whetlab
 
             % Create a task for this experiment         
             task_name = self.task;
-            res = self.client.tasks().create(experiment_id,task_name,description);
+            res = self.client.tasks().create(experiment_id,task_name,description,struct());
             self.task_id = res.body.('id');
             self.outcome_name = outcome.('name');
             
@@ -146,7 +146,7 @@ classdef whetlab
                 res = self.client.setting().set(num2str(keys{i}),...
                     param.('type'), param.('min'), param.('max'),...
                     param.('size'), param.('units'), experiment_id, ...
-                    param.('scale'), false);
+                    param.('scale'), false, struct());
 
                 % Record the setting ids
                 self.params_to_setting_ids.put(keys{i}, res.body.id);
@@ -157,7 +157,7 @@ classdef whetlab
             outcome = self.structUpdate(param, outcome);
             res = self.client.setting().set(outcome.('name'),...
                 outcome.('type'),-10.0,10.0,1,outcome.('units'),...
-                experiment_id, outcome.('scale'), true);
+                experiment_id, outcome.('scale'), true, struct());
             self.params_to_setting_ids.put(outcome.name, res.body.id);            
         end
     end % Experiment()
@@ -303,7 +303,7 @@ classdef whetlab
         % :return: Values to assign to the parameters in the suggested job.
         % :rtype: struct
 
-        res = self.client.suggest(num2str(self.task_id)).go();
+        res = self.client.suggest(num2str(self.task_id)).go(struct());
         res = res.body;
         result_id = res.('id');
         
@@ -316,7 +316,7 @@ classdef whetlab
         variables = res.variables;
         while isempty(variables)
             pause(2);
-            result = self.client.result(num2str(result_id)).get();
+            result = self.client.result(num2str(result_id)).get(struct());
             variables = result.body.variables;
         end
         
@@ -368,7 +368,7 @@ classdef whetlab
         
         if result_id == -1
             % - Add new results with param_values and outcome_val
-            result = self.client.results().add(self.task_id, true, '', '').body;
+            result = self.client.results().add(self.task_id, true, '', '', struct()).body;
             result_id = result.id;
 
             % Create variables for new result
@@ -393,17 +393,17 @@ classdef whetlab
             try
                 res = self.client.result(num2str(result_id)).replace(...
                     result.variables,result.task, result.userProposed,...
-                    result.description, result.runDate, result.id);
+                    result.description, result.runDate, result.id, struct());
             catch err
                 % If the update fails for whatever reason (e.g. validation)
                 % we need to make sure we don't leave around empty results
-                self.client.result(num2str(result_id)).delete();
+                self.client.result(num2str(result_id)).delete(struct());
                 rethrow(err);
             end
 
             self.ids_to_param_values.put(result_id, savejson('',param_values));
         else
-            result = self.client.result(num2str(result_id)).get().body();
+            result = self.client.result(num2str(result_id)).get(struct()).body();
 
             for i = 1:numel(result.variables)
                 var = result.variables{i};
@@ -418,7 +418,7 @@ classdef whetlab
             self.param_values.put(result_id, savejson('',result));
             res = self.client.result(num2str(result_id)).replace(...
                 result.variables,result.task, result.userProposed,...
-                result.description, result.runDate, result.id);
+                result.description, result.runDate, result.id, struct());
 
             % Remove this job from the pending list
             self.pending(self.pending == result_id) = [];
@@ -448,7 +448,7 @@ classdef whetlab
             self.pending(self.pending == id) = [];
 
             % Delete from server
-            res = self.client.result(num2str(id)).delete();
+            res = self.client.result(num2str(id)).delete(struct());
         else
             warning('Did not find experiment with the provided parameters');
         end
@@ -472,7 +472,7 @@ classdef whetlab
         result_id = ids(ind);
 
         % Get param values that generated this outcome
-        result = self.client.result(num2str(result_id)).get().body;
+        result = self.client.result(num2str(result_id)).get(struct()).body;
         for i = 1:numel(result.('variables'))
             v = result.('variables'){i};
             if ~strcmp(v.name, self.outcome_name)
