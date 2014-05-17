@@ -189,8 +189,8 @@ classdef whetlab
                 rest_exps = rest_exps.results;                
                 for i = 1:numel(rest_exps)
                     expt = rest_exps{i};
-                    if (strcmp(expt.('description'), self.experiment_description) == 0 && ...
-                        strcmp(expt.('name'),self.experiment) == 0)
+                    if (strcmp(expt.('description'), self.experiment_description) == 1 && ...
+                        strcmp(expt.('name'),self.experiment) == 1)
                         self.experiment_id = expt.id;
                         found = true;
                         break;
@@ -215,7 +215,7 @@ classdef whetlab
             page = 1;
             more_pages = true;
             while more_pages
-                rest_tasks = self.client.tasks().get(struct('query',struct('page',page))).body;
+                rest_tasks = self.client.tasks().get(struct('query',struct('page',page, 'experiment',self.experiment_id))).body;
                 more_pages = ~isempty(rest_tasks.('next'));
                 page = page + 1;
 
@@ -224,9 +224,8 @@ classdef whetlab
                 found = false;
                 for i = 1:numel(rest_tasks)
                     task = rest_tasks{i};
-                    if (strcmp(task.('experiment'), self.experiment_id) == 0 && ...
-                            strcmp(task.('name'),self.task) == 0 && ...
-                            strcmp(task.('description'), self.task_description) == 0)
+                    if (strcmp(task.('name'),self.task) == 1 && ...
+                        strcmp(task.('description'), self.task_description) == 1)
                         self.task_id = task.('id');
                         found = true;
                         break
