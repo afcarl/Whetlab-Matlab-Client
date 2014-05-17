@@ -112,12 +112,12 @@ classdef whetlab
         self.task = name;
         self.task_description = description;
 
-
         if resume
             self.experiment_id = experiment_id;
             self.task_id = task_id;
             self = self.sync_with_server();
-
+            disp('Attempting to resume experiment');
+            
         else
             % Create new experiment
             user = 4;
