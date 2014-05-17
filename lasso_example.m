@@ -2,7 +2,7 @@
 % and use whetlab to pick the best model parameters.
 
 % First put the whetlab api client on the path
-addpath(genpath('./api/matlab/'));
+addpath(genpath('.'));
 
 % Fill in with your whetlab access token.
 accessToken = '6d70e340-a677-4e7e-af87-f1229a9a1f1e';
