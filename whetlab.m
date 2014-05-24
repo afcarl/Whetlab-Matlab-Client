@@ -328,15 +328,15 @@ classdef whetlab
         ids = self.ids_to_outcome_values.keySet().toArray();
         outcomes = self.ids_to_outcome_values.values().toArray();
         outcomes = arrayfun(@(x)x, outcomes);
-        ret = [];
+        pend = [];
         for j = 1:length(outcomes)
             val = outcomes(j);
             if isnan(val)
                 ret(i) = loadjson(self.ids_to_param_values.get(ids(j)));
                 i = i + 1;
+                pend = ret;
             end
         end
-        pend = ret;
     end % pending()
 
     function clear_pending(self)
@@ -406,6 +406,16 @@ classdef whetlab
             end
         end
     end % get_id
+
+    function delete(self)
+        %%
+        % Delete the experiment with the given name and description.  
+        %
+        % Important, this cancels the experiment and removes all saved results!
+        %% 
+        res = self.client.experiment(str(self.experiment_id)).delete();
+        disp('Experiment has been deleted');
+    end
     
     function self = update(self, param_values, outcome_val)
         % Update the experiment with the outcome value associated with some parameter values.
