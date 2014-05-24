@@ -90,7 +90,7 @@ classdef whetlab
 
         assert(usejava('jvm'),'This code requires Java');
         if (nargin == 5)
-            resume = false;
+            resume = true;
         end
         if (nargin < 7)
             experiment_id = -1;
@@ -101,7 +101,7 @@ classdef whetlab
         
         % Create REST server client
         options = struct('user_agent', 'whetlab_matlab_client',...
-            'api_version','api', 'base', 'http://api.whetlab.com/');
+            'api_version','api', 'base', 'http://localhost:8000/');
         options.headers.('Authorization') = ['Bearer ' access_token];
         self.client = whetlab_api_client('', options);
 
@@ -118,7 +118,7 @@ classdef whetlab
             self.task_id = task_id;
             try
                 self = self.sync_with_server();
-                disp(['Resuming experiment:' self.experiment]);
+                disp(['Resuming experiment: ' self.experiment]);
                 return % Successfully resumed
             catch err
                 if ~strcmp(err.identifier, 'Whetlab:ExperimentNotFoundError')
@@ -310,7 +310,6 @@ classdef whetlab
             end
         end
     end
-        
 
     function pend = pending(self)
         %%
@@ -339,7 +338,18 @@ classdef whetlab
         end
         pend = ret;
     end % pending()
-        
+
+    function clear_pending(self)
+        %%
+        %Delete all of the jobs which have been suggested but for which no 
+        %result has been provided yet (i.e. pending jobs).
+        %%
+        jobs = self.pending();
+        if ~isempty(jobs)
+            self.cancel(jobs);
+        end
+        self = self.sync_with_server();
+    end        
     function next = suggest(self)
         % Suggest a new job.
         % :return: Values to assign to the parameters in the suggested job.
