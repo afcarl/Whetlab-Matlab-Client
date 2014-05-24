@@ -63,7 +63,7 @@ classdef whetlab
        % All of the outcome values seen thus far
        outcome_values        = java.util.Hashtable;
        % The set of result IDs corresponding to suggested jobs that are pending
-       pending               = [];
+       pending_ids           = [];
        experiment            = '';
        task                  = '';
        task_description      = '';
@@ -106,7 +106,7 @@ classdef whetlab
             'api_version','api', 'base', hostname);
         options.headers.('Authorization') = ['Bearer ' access_token];
         self.client = whetlab_api_client('', options);
-        
+
         % For now, we support one task per experiment, and the name and description of the task
         % is the same as the experiment's
         self.experiment_description = description;
@@ -115,19 +115,28 @@ classdef whetlab
         self.task_description = description;
 
         if resume
+            % Try to resume if the experiment exists. If it doesn't exist, we'll create it.
             self.experiment_id = experiment_id;
             self.task_id = task_id;
-            self = self.sync_with_server();
-            disp('Attempting to resume experiment');
-            
-        else
-            % Create new experiment
-            user = 4;
-            res = self.client.experiments().create(name,description,user,struct());
-            experiment_id = res.body.('id');
-            self.experiment_id = experiment_id;
+            try
+                self = self.sync_with_server();
+                disp(['Resuming experiment:' self.experiment]);
+                return % Successfully resumed
+            catch err
+                if ~strcmp(err.identifier, 'Whetlab:ExperimentNotFoundError')
+                    rethrow(err);
+                end
+            end
+        end
 
-            % Create a task for this experiment         
+        % Create new experiment
+        user = 4;
+        res = self.client.experiments().create(name,description,user,struct());
+        experiment_id = res.body.('id');
+        self.experiment_id = experiment_id;
+
+        % Create a task for this experiment.  If this fails, we need to destroy the experiment
+        try
             task_name = self.task;
             res = self.client.tasks().create(experiment_id,task_name,description,struct());
             self.task_id = res.body.('id');
@@ -160,7 +169,10 @@ classdef whetlab
             res = self.client.setting().set(outcome.('name'),...
                 outcome.('type'),-10.0,10.0,1,outcome.('units'),...
                 experiment_id, outcome.('scale'), true, struct());
-            self.params_to_setting_ids.put(outcome.name, res.body.id);            
+            self.params_to_setting_ids.put(outcome.name, res.body.id); 
+        catch
+            % Task creation failed.  Destroy the experiment to prevent taskless experiments.
+            res = self.client.experiment(num2str(experiment_id)).delete()
         end
     end % Experiment()
 
@@ -290,6 +302,8 @@ classdef whetlab
                     % Don't record the outcome if the experiment is pending
                     if ~isempty(v.value)
                         self.ids_to_outcome_values.put(res_id, v.value);
+                    else % Treat NaN as the special indicator that the experiment is pending
+                        self.ids_to_outcome_values.put(res_id, nan);
                     end
                 else
                     tmp.(v.('name')) = v.('value');
@@ -300,6 +314,34 @@ classdef whetlab
     end
         
 
+    function pend = pending(self)
+        %%
+        %Return the list of jobs which have been suggested, but for which no 
+        %result has been provided yet.
+        %
+        %return: Struct array of parameter values.
+        %rtype: struct array
+        %%
+    
+        % Sync with the REST server     
+        self.sync_with_server()
+
+        % Find IDs of results with value None and append parameters to returned list
+        i = 1;
+        ids = self.ids_to_outcome_values.keySet().toArray();
+        outcomes = self.ids_to_outcome_values.values().toArray();
+        outcomes = arrayfun(@(x)x, outcomes);
+        ret = [];
+        for j = 1:length(outcomes)
+            val = outcomes(j);
+            if isnan(val)
+                ret(i) = loadjson(self.ids_to_param_values.get(ids(j)));
+                i = i + 1;
+            end
+        end
+        pend = ret;
+    end % pending()
+        
     function next = suggest(self)
         % Suggest a new job.
         % :return: Values to assign to the parameters in the suggested job.
@@ -310,7 +352,7 @@ classdef whetlab
         result_id = res.('id');
         
         % Remember that this job is now assumed to be pending
-        self.pending(end+1) = result_id;
+        self.pending_ids(end+1) = result_id;
         
         % Poll the server for the actual variable values in the suggestion.  
         % Once the Bayesian optimization proposes an
@@ -423,7 +465,7 @@ classdef whetlab
                 result.description, result.runDate, result.id, struct());
 
             % Remove this job from the pending list
-            self.pending(self.pending == result_id) = [];
+            self.pending_ids(self.pending_ids == result_id) = [];
         end
         self.ids_to_outcome_values.put(result_id, outcome_val);
     end %update
@@ -431,28 +473,30 @@ classdef whetlab
     %% Cancel a job by removing the parameters and result. 
     function self = cancel(self,param_values)
         % Cancel a job, by removing it from the jobs recorded so far in the experiment.
-
+        %
         % :param param_values: Values of the parameters for the job to cancel.
-        % :type param_values: struct
-        
+        % :type param_values: struct or struct array
+        %
         % Check whether this param_values has a results ID
-        id = self.get_id(param_values);
-        
-        if id ~= -1
-            self.ids_to_param_values.remove(num2str(id));
-
-            % Delete from internals
-            if self.ids_to_outcome_values.containsKey(id)
-                self.ids_to_outcome_values.remove(id);
-            end
+        for i = 1:numel(param_values)
+            id = self.get_id(param_values(i));
             
-            % Remove this job from the pending list if it's there.
-            self.pending(self.pending == id) = [];
+            if id ~= -1
+                self.ids_to_param_values.remove(num2str(id));
 
-            % Delete from server
-            res = self.client.result(num2str(id)).delete(struct());
-        else
-            warning('Did not find experiment with the provided parameters');
+                % Delete from internals
+                if self.ids_to_outcome_values.containsKey(id)
+                    self.ids_to_outcome_values.remove(id);
+                end
+                
+                % Remove this job from the pending list if it's there.
+                self.pending_ids(self.pending_ids == id) = [];
+
+                % Delete from server
+                res = self.client.result(num2str(id)).delete(struct());
+            else
+                warning('Did not find experiment with the provided parameters');
+            end
         end
     end % cancel
     
