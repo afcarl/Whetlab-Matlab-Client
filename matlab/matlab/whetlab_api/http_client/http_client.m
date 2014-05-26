@@ -190,6 +190,7 @@ classdef http_client
                     [outputs,extras] = urlread2(url,upper(method), ...
                                                 paramString, heads);
                 end
+                outputs = regexprep(outputs, '-Infinity', '"-_Inf_"');
 
                 % Display a reasonable amount of information if the
                 % Http request fails for whatever reason
