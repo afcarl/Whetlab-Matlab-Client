@@ -101,7 +101,7 @@ classdef whetlab
         
         % Create REST server client
         options = struct('user_agent', 'whetlab_matlab_client',...
-            'api_version','api', 'base', 'http://localhost:8000/');
+            'api_version','api', 'base', 'http://api.whetlab.com/');
         options.headers.('Authorization') = ['Bearer ' access_token];
         self.client = whetlab_api_client('', options);
 
@@ -425,6 +425,12 @@ classdef whetlab
         % :param outcome_val: Value of the outcome.
         % :type outcome_val: type defined for outcome
 
+        % Convert the outcome to a constraint violation if it's not finite
+        if ~isfinite(outcome_val)
+            % This will be read in as Inf after being passed to the server
+            outcome_val = -1e999;
+        end
+        
         % Check whether this param_values has a results ID
         result_id = self.get_id(param_values);
         
