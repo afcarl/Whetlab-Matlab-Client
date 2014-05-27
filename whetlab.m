@@ -447,7 +447,7 @@ classdef whetlab
                 setting_id = self.params_to_setting_ids.get(name);
                 if isfield(param_values, name)
                     value = param_values.(name);
-                elseif strcmpi(name, self.outcome_name)
+                elseif strcmp(name, self.outcome_name)
                     value = outcome_val;
                 else
                     error('InvalidJobError',...
