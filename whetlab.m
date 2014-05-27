@@ -67,7 +67,7 @@ classdef whetlab
        experiment            = '';
        task                  = '';
        task_description      = '';
-       experiment_description= '';       
+       experiment_description= '';
        task_id = -1;
        experiment_id = -1;
        outcome_name;
