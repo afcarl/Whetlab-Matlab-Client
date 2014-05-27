@@ -107,114 +107,6 @@ The following options are available while calling a method of an api:
  * __body__: Body of the request
  * __request_type__: Format of the request body
 
-### A Single Result api
-
-Manipulate a result set indexed by its id
-
-The following arguments are required:
-
- * __id__: Identifier of a result
-
-```python
-result = client.result(0)
-```
-
-##### Get Result (GET /alpha/results/:id/)
-
-Return a specific result indexed by id
-
-
-
-```python
-response = result.get(options)
-```
-
-##### Delete Result (DELETE /alpha/results/:id/)
-
-Delete the result instance indexed by id
-
-
-
-```python
-response = result.delete(options)
-```
-
-##### Update Result (PATCH /alpha/results/:id/)
-
-Update a specific result indexed by id
-
-The following arguments are required:
-
- * __variables__: The result list of dictionary objects with updated fields.
- * __task__: Task id
- * __userProposed__: userProposed
- * __description__: description
- * __runDate__: <no value>
- * __id__: <no value>
-
-```python
-response = result.update("[]", 1, True, "This is a result", "2014-02-22T21:20:35.889Z", 27, options)
-```
-
-##### Replace Result (PUT /alpha/results/:id/)
-
-Replace a specific result indexed by id. To be used instead of update if HTTP patch is unavailable
-
-The following arguments are required:
-
- * __variables__: The result list of dictionary objects with updated fields.
- * __task__: Task id
- * __userProposed__: userProposed
- * __description__: description
- * __runDate__: <no value>
- * __id__: <no value>
-
-```python
-response = result.replace("[]", 1, True, "This is a result", "2014-02-22T21:20:35.889Z", 27, options)
-```
-
-### Variables Set api
-
-Returns the variables set for a user
-
-
-
-```python
-variables = client.variables()
-```
-
-##### Get variables set (GET /alpha/variables)
-
-Return the variables set corresponding to user
-
-
-
-```python
-response = variables.get(options)
-```
-
-### Experimental Settings api
-
-Returns the settings config for an experiment
-
-
-
-```python
-settings = client.settings()
-```
-
-##### Get Settings (GET /alpha/settings/)
-
-Return the settings corresponding to the experiment.
-
-The following arguments are required:
-
- * __experiment__: Experiment id to filter by.
-
-```python
-response = settings.get(1, options)
-```
-
 ### <no value> api
 
 Return user list
@@ -389,7 +281,147 @@ The following arguments are required:
  * __isOutput__: Is this variable an output of the experiment
 
 ```python
-response = setting.set("Heating Temperature", 1, "Degrees Celcius", 1, False, "float", 0, 100, "linear", options)
+response = setting.set("float", 0, 100, "linear", "Heating Temperature", 1, "Degrees Celcius", 1, False, options)
+```
+
+### A Single Result api
+
+Manipulate a result set indexed by its id
+
+The following arguments are required:
+
+ * __id__: Identifier of a result
+
+```python
+result = client.result(0)
+```
+
+##### Get Result (GET /alpha/results/:id/)
+
+Return a specific result indexed by id
+
+
+
+```python
+response = result.get(options)
+```
+
+##### Delete Result (DELETE /alpha/results/:id/)
+
+Delete the result instance indexed by id
+
+
+
+```python
+response = result.delete(options)
+```
+
+##### Update Result (PATCH /alpha/results/:id/)
+
+Update a specific result indexed by id
+
+The following arguments are required:
+
+ * __variables__: The result list of dictionary objects with updated fields.
+ * __task__: Task id
+ * __userProposed__: userProposed
+ * __description__: description
+ * __runDate__: <no value>
+ * __id__: <no value>
+
+```python
+response = result.update("[]", 1, True, "This is a result", "2014-02-22T21:20:35.889Z", 27, options)
+```
+
+##### Replace Result (PUT /alpha/results/:id/)
+
+Replace a specific result indexed by id. To be used instead of update if HTTP patch is unavailable
+
+The following arguments are required:
+
+ * __variables__: The result list of dictionary objects with updated fields.
+ * __task__: Task id
+ * __userProposed__: userProposed
+ * __description__: description
+ * __runDate__: <no value>
+ * __id__: <no value>
+
+```python
+response = result.replace("[]", 1, True, "This is a result", "2014-02-22T21:20:35.889Z", 27, options)
+```
+
+### Variables Set api
+
+Returns the variables set for a user
+
+
+
+```python
+variables = client.variables()
+```
+
+##### Get variables set (GET /alpha/variables)
+
+Return the variables set corresponding to user
+
+
+
+```python
+response = variables.get(options)
+```
+
+### Experiment api
+
+Manipulate the experiment indexed by id.
+
+The following arguments are required:
+
+ * __id__: Identifier of corresponding experiment
+
+```python
+experiment = client.experiment(15)
+```
+
+##### Get experiment corresponding to id. (GET /alpha/experiments/:id/)
+
+Return the experiment corresponding to id.
+
+
+
+```python
+response = experiment.get(options)
+```
+
+##### Delete experiment corresponding to id. (DELETE /alpha/experiments/:id/)
+
+Delete the experiment corresponding to id.
+
+
+
+```python
+response = experiment.delete(options)
+```
+
+### Experimental Settings api
+
+Returns the settings config for an experiment
+
+
+
+```python
+settings = client.settings()
+```
+
+##### Get Settings (GET /alpha/settings/)
+
+Return the settings corresponding to the experiment.
+
+The following arguments are required:
+
+ * __experiment__: Experiment id to filter by.
+
+```python
+response = settings.get(1, options)
 ```
 
 ## Contributors
