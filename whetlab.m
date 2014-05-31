@@ -128,8 +128,19 @@ classdef whetlab
         end
 
         % Create new experiment
-        user = 4;
-        res = self.client.experiments().create(name,description,user,struct());
+        try
+            res = self.client.experiments().create(name,description,4,struct());
+        catch err
+            if (resume && ...
+                strcmp(err.identifier, 'MATLAB:HttpConection:ConnectionError') && ...
+                ~isempty(strfind(err.message, 'Experiment with this User and Name already exists')))
+                self = self.sync_with_server();
+                return
+            else
+                % This experiment was just already created - race condition.
+                rethrow(err);
+            end
+        end
         experiment_id = res.body.('id');
         self.experiment_id = experiment_id;
 
@@ -388,7 +399,7 @@ classdef whetlab
     function id = get_id(self, param_values)
         % Return the result ID corresponding to the given ``param_values``.
         % If no result matches, return -1.
-
+        %
         % :param param_values: Values of parameters.
         % :type param_values: struct
         % :return: ID of the corresponding result. If not match, -1 is returned.
@@ -431,11 +442,6 @@ classdef whetlab
             outcome_val = -1e999;
         end
         
-        % Update with the server in case something has changed
-        % In particular it's possible that another client could have
-        % already added this result
-        self.sync_with_server();
-
         % Check whether this param_values has a result ID
         result_id = self.get_id(param_values);
         
