@@ -70,7 +70,7 @@ classdef whetlab
        experiment_description= '';
        task_id = -1;
        experiment_id = -1;
-       outcome_name;
+       outcome_name = '';
        parameters;
 
        INF_PAGE_SIZE = 1000000;
@@ -171,14 +171,14 @@ classdef whetlab
                 % Record the setting ids
                 self.params_to_setting_ids.put(keys{i}, res.body.id);
             end
-        
+
             % Add the outcome variable
             param = struct('units','Reals', 'scale','linear', 'type','float');
             outcome = self.structUpdate(param, outcome);
             res = self.client.setting().set(outcome.('name'),...
                 outcome.('type'),-10.0,10.0,1,outcome.('units'),...
                 experiment_id, outcome.('scale'), true, struct());
-            self.params_to_setting_ids.put(outcome.name, res.body.id); 
+            self.params_to_setting_ids.put(outcome.name, res.body.id);
         catch
             % Task creation failed.  Destroy the experiment to prevent taskless experiments.
             res = self.client.experiment(num2str(experiment_id)).delete()
@@ -311,7 +311,7 @@ classdef whetlab
                     % Don't record the outcome if the experiment is pending
                     if ~isempty(v.value)
                         self.ids_to_outcome_values.put(res_id, v.value);
-                    else % Treat NaN as the special indicator that the experiment is pending
+                    else % Treat NaN as the special indicator that the experiment is pending. We use -INF for constrant violations
                         self.ids_to_outcome_values.put(res_id, nan);
                     end
                 else
@@ -320,6 +320,12 @@ classdef whetlab
                 end
             end
         end
+
+        % Make sure that everything worked
+        assert(~isempty(self.outcome_name))
+        assert(self.experiment_id >= 0)
+        assert(self.task_id >= 0)
+
     end
 
     function pend = pending(self)
@@ -365,7 +371,9 @@ classdef whetlab
         % Suggest a new job.
         % :return: Values to assign to the parameters in the suggested job.
         % :rtype: struct
+        self.sync_with_server();
 
+        assert(self.task_id >= 0)
         res = self.client.suggest(num2str(self.task_id)).go(struct());
         res = res.body;
         result_id = res.('id');
