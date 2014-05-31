@@ -419,19 +419,24 @@ classdef whetlab
     
     function self = update(self, param_values, outcome_val)
         % Update the experiment with the outcome value associated with some parameter values.
-
+        %
         % :param param_values: Values of parameters.
         % :type param_values: struct
         % :param outcome_val: Value of the outcome.
         % :type outcome_val: type defined for outcome
-
+        %
         % Convert the outcome to a constraint violation if it's not finite
         if ~isfinite(outcome_val)
             % This will be read in as Inf after being passed to the server
             outcome_val = -1e999;
         end
         
-        % Check whether this param_values has a results ID
+        % Update with the server in case something has changed
+        % In particular it's possible that another client could have
+        % already added this result
+        self.sync_with_server();
+
+        % Check whether this param_values has a result ID
         result_id = self.get_id(param_values);
         
         if result_id == -1
