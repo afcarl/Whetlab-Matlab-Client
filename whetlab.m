@@ -101,7 +101,7 @@ classdef whetlab
         
         % Create REST server client
         options = struct('user_agent', 'whetlab_matlab_client',...
-            'api_version','api', 'base', 'http://api.whetlab.com/');
+            'api_version','api', 'base', 'http://localhost:8000/');
         options.headers.('Authorization') = ['Bearer ' access_token];
         self.client = whetlab_api_client('', options);
 
@@ -111,6 +111,7 @@ classdef whetlab
         self.experiment = name;
         self.task = name;
         self.task_description = description;
+        self.outcome_name = outcome.name;
 
         if resume
             % Try to resume if the experiment exists. If it doesn't exist, we'll create it.
@@ -128,8 +129,41 @@ classdef whetlab
         end
 
         % Create new experiment
+        % Add specification of parameters        
+        self.parameters = parameters;
+        keys = fieldnames(parameters);        
+        for i = 1:numel(keys)
+            param = parameters.(keys{i});
+
+            % Add default parameters if not present
+            if ~isfield(param,'units'), param.('units') = 'Reals'; end
+            if ~isfield(param,'scale'), param.('scale') = 'linear'; end
+            if ~isfield(param,'type'), param.('type') = 'float'; end
+
+            settings(i) = param;
+            settings(i).name = keys{i};
+            
+            self.parameters.(keys{i}) = param;
+
+            % Record the setting ids
+            %self.params_to_setting_ids.put(keys{i}, res.body.id);
+        end
+
+        % Add the outcome variable
+        param = struct('units','Reals', 'scale','linear', 'type','float');
+        outcome = self.structUpdate(param, outcome);
+        settings(end+1) = self.structUpdate(settings(end), outcome);
+        settings(end).name = self.outcome_name;
+        settings(end).isOutput = true;
+        settings(end).min = -100;
+        settings(end).max = 100;
+        settings(end).size = 1;        
+
+        expt.name = name;
+        expt.description = description;
+        expt.settings = settings;
         try
-            res = self.client.experiments().create(name,description,4,struct());
+            res = self.client.tasks().create(name, description, settings, struct());
         catch err
             if (resume && ...
                 strcmp(err.identifier, 'MATLAB:HttpConection:ConnectionError') && ...
@@ -141,48 +175,10 @@ classdef whetlab
                 rethrow(err);
             end
         end
-        experiment_id = res.body.('id');
+        experiment_id = res.body.('experiment');
         self.experiment_id = experiment_id;
-
-        % Create a task for this experiment.  If this fails, we need to destroy the experiment
-        try
-            task_name = self.task;
-            res = self.client.tasks().create(experiment_id,task_name,description,struct());
-            self.task_id = res.body.('id');
-            self.outcome_name = outcome.('name');
-            
-            % Add specification of parameters to task
-            self.parameters = parameters;
-            keys = fieldnames(parameters);
-            for i = 1:numel(keys)
-                param = parameters.(keys{i});
-
-                % Add default parameters if not present
-                if ~isfield(param,'units'), param.('units') = 'Reals'; end
-                if ~isfield(param,'scale'), param.('scale') = 'linear'; end
-                if ~isfield(param,'type'), param.('type') = 'float'; end
-                
-                self.parameters.(keys{i}) = param;
-                res = self.client.setting().set(num2str(keys{i}),...
-                    param.('type'), param.('min'), param.('max'),...
-                    param.('size'), param.('units'), experiment_id, ...
-                    param.('scale'), false, struct());
-
-                % Record the setting ids
-                self.params_to_setting_ids.put(keys{i}, res.body.id);
-            end
-
-            % Add the outcome variable
-            param = struct('units','Reals', 'scale','linear', 'type','float');
-            outcome = self.structUpdate(param, outcome);
-            res = self.client.setting().set(outcome.('name'),...
-                outcome.('type'),-10.0,10.0,1,outcome.('units'),...
-                experiment_id, outcome.('scale'), true, struct());
-            self.params_to_setting_ids.put(outcome.name, res.body.id);
-        catch
-            % Task creation failed.  Destroy the experiment to prevent taskless experiments.
-            res = self.client.experiment(num2str(experiment_id)).delete()
-        end
+        task_id = res.body.('id');
+        self.task_id = task_id;
     end % Experiment()
 
     function self = sync_with_server(self)

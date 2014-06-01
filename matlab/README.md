@@ -190,12 +190,12 @@ Creates a new task
 
 The following arguments are required:
 
- * __experiment__: The id of the relevant experiment.
  * __name__: A short name for the task. Max 500 chars
  * __description__: A detailed description of the task
+ * __settings__: The parameter specification of the parameters to tbe optimized
 
 ```python
-response = tasks.create(1, "John Eggs", "Optimizing eggs specifically for Johns tastes", options)
+response = tasks.create(1, "John Eggs", "Optimizing eggs specifically for Johns tastes", "A dictionary containing all the experimental settings", options)
 ```
 
 ### Suggest experiment api
@@ -230,7 +230,7 @@ Returns the experiments set for a user
 experiments = client.experiments()
 ```
 
-##### Get experiments set (GET /alpha/experiments)
+##### Get experiments set (GET /alpha/experiments/)
 
 Return the experiments set corresponding to user
 
@@ -430,10 +430,10 @@ Here is a list of [Contributors](https://github.com/JasperSnoek/whetlab-python/c
 ### TODO
 
 ## License
-Harvard
+BSD
 
 ## Bug Reports
 Report [here](https://github.com/JasperSnoek/whetlab-python/issues).
 
 ## Contact
-Jasper Snoek (jaspersnoek@gmail.com)
+Whetlab (info@whetlab.com)

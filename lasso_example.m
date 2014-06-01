@@ -6,7 +6,7 @@ addpath(genpath('.'));
 
 % Fill in with your whetlab access token.
 %accessToken = '6d70e340-a677-4e7e-af87-f1229a9a1f1e'; % john
-accessToken = 'ec0e3e69-cd1a-4479-aa8d-aa3c7f670117';  % rpa
+accessToken = 'LHf5OkiqJjz89bZeEEmepfg1tZVT6W';  % rpa
 
 load ovarian_dataset;
 order = randperm(size(ovarianInputs,2)); % Grab a subset of data to make the problem harder.
@@ -21,11 +21,11 @@ parameters.('Alpha') = struct('name', 'Alpha', 'type','float',...
 outcome.name = 'Negative deviance';
 
 % Create a new experiment 
-scientist = whetlab('E-Net Logistic Regression I',...
-                    'Optimizing the hyper-parameters of an elastic net in matlab',...
+scientist = whetlab('E-Net Logistic Debugg Regression',...
+                    'Testing creation of task and experiment together again',...
                     accessToken,...
                     parameters,...
-                    outcome);
+                    outcome, true);
 
 n_iterations = 20;
 for i = 1:n_iterations

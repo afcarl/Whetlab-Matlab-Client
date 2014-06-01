@@ -30,10 +30,10 @@ methods
         % Creates a new task
         % '/alpha/tasks/' POST
         %
-        % experiment - The id of the relevant experiment.
         % name - A short name for the task. Max 500 chars
         % description - A detailed description of the task
-        function response = create(self, experiment, name, description, options)
+        % settings - The parameter specification of the parameters to tbe optimized
+        function response = create(self, name, description, settings, options)
                 if ~exist('options')
                     options = struct;
                 end
@@ -43,9 +43,9 @@ methods
                     body = struct;
                 end
                 
-                body.experiment = experiment;
                 body.name = name;
                 body.description = description;
+                body.settings = settings;
 
                 response = self.client.post(['/alpha/tasks/'], body, options);
 
