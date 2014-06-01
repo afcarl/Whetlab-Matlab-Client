@@ -6,7 +6,7 @@ addpath(genpath('.'));
 
 % Fill in with your whetlab access token.
 %accessToken = '6d70e340-a677-4e7e-af87-f1229a9a1f1e'; % john
-accessToken = 'LHf5OkiqJjz89bZeEEmepfg1tZVT6W';  % rpa
+accessToken = 'f5f453f8-e38e-419f-81a1-14e674b81000';  % rpa
 
 load ovarian_dataset;
 order = randperm(size(ovarianInputs,2)); % Grab a subset of data to make the problem harder.
@@ -21,11 +21,11 @@ parameters.('Alpha') = struct('name', 'Alpha', 'type','float',...
 outcome.name = 'Negative deviance';
 
 % Create a new experiment 
-scientist = whetlab('E-Net Logisebugg Regression',...
-                    'Testing creation of task and experiment together again',...
+scientist = whetlab('E-Net Logistics Regression',...
+                    'Logistic regression with an elastic net lasso penalty',...
                     accessToken,...
                     parameters,...
-                    outcome, true);
+                    outcome);
 
 n_iterations = 20;
 for i = 1:n_iterations
