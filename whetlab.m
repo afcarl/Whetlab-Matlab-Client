@@ -101,7 +101,7 @@ classdef whetlab
         
         % Create REST server client
         options = struct('user_agent', 'whetlab_matlab_client',...
-            'api_version','api', 'base', 'http://localhost:8000/');
+            'api_version','api', 'base', 'http://api.whetlab.com/');
         options.headers.('Authorization') = ['Bearer ' access_token];
         self.client = whetlab_api_client('', options);
 
