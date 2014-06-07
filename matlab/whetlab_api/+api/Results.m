@@ -30,11 +30,12 @@ methods
         % Add a user created result
         % '/alpha/results/' POST
         %
+        % variables - The result list of dictionary objects with updated fields.
         % task - Task id
         % userProposed - userProposed
         % description - description
         % runDate - <no value>
-        function response = add(self, task, userProposed, description, runDate, options)
+        function response = add(self, variables, task, userProposed, description, runDate, options)
                 if ~exist('options')
                     options = struct;
                 end
@@ -44,6 +45,7 @@ methods
                     body = struct;
                 end
                 
+                body.variables = variables;
                 body.task = task;
                 body.userProposed = userProposed;
                 body.description = description;

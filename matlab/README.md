@@ -107,183 +107,6 @@ The following options are available while calling a method of an api:
  * __body__: Body of the request
  * __request_type__: Format of the request body
 
-### <no value> api
-
-Return user list
-
-
-
-```python
-users = client.users()
-```
-
-##### Get user list (GET /users)
-
-<no value>
-
-
-
-```python
-response = users.getusers(options)
-```
-
-### Results Set api
-
-Manipulate the results set for an experiment given filters
-
-
-
-```python
-results = client.results()
-```
-
-##### Get Results Set (GET /alpha/results)
-
-Return a result set corresponding to an experiment
-
-The following arguments are required:
-
-
-```python
-response = results.get(1, 1, options)
-```
-
-##### Add a Result (POST /alpha/results/)
-
-Add a user created result
-
-The following arguments are required:
-
- * __task__: Task id
- * __userProposed__: userProposed
- * __description__: description
- * __runDate__: <no value>
-
-```python
-response = results.add(
-], 1, True, "This is a result", "2014-02-22T21:20:35.889Z", options)
-```
-
-### Task Set api
-
-Returns the tasks set for a user
-
-
-
-```python
-tasks = client.tasks()
-```
-
-##### Get tasks set (GET /alpha/tasks)
-
-Return the task set corresponding to user
-
-
-
-```python
-response = tasks.get(options)
-```
-
-##### Create task (POST /alpha/tasks/)
-
-Creates a new task
-
-The following arguments are required:
-
- * __name__: A short name for the task. Max 500 chars
- * __description__: A detailed description of the task
- * __settings__: The parameter specification of the parameters to tbe optimized
-
-```python
-response = tasks.create(1, "John Eggs", "Optimizing eggs specifically for Johns tastes", "A dictionary containing all the experimental settings", options)
-```
-
-### Suggest experiment api
-
-Ask the server to propose a new set of parameters to run the next experiment
-
-The following arguments are required:
-
- * __taskid__: Identifier of corresponding task
-
-```python
-suggest = client.suggest(0)
-```
-
-##### Suggest experiment (POST /alpha/tasks/:taskid/suggest/)
-
-Ask the server to propose a new set of parameters to run the next experiment
-
-
-
-```python
-response = suggest.go(options)
-```
-
-### Experiments Set api
-
-Returns the experiments set for a user
-
-
-
-```python
-experiments = client.experiments()
-```
-
-##### Get experiments set (GET /alpha/experiments/)
-
-Return the experiments set corresponding to user
-
-
-
-```python
-response = experiments.get(options)
-```
-
-##### Create experiment (POST /alpha/experiments/)
-
-Create a new experiment and get the corresponding id
-
-The following arguments are required:
-
- * __name__: The name of the experiment to be created.
- * __description__: A detailed description of the experiment
- * __user__: The user id of this user
-
-```python
-response = experiments.create("Johns Eggsperiment", "Optimizing the recipe for the perfect soft-boiled egg.", 4, options)
-```
-
-### An Experimental Setting api
-
-Manipulate an experimental settings object
-
-
-
-```python
-setting = client.setting()
-```
-
-##### Set Settings (POST /alpha/settings/)
-
-Set a setting corresponding to an experiment
-
-The following arguments are required:
-
- * __name__: The name of the variable.
- * __type__: The type of variable. One of int,float,etc.
- * __min__: Minimum value for the variable
- * __max__: Maximum value for the variable
- * __size__: Vector size for the variable
- * __units__: What units is the variable in?
- * __experiment__: The experiment associated with this variable
- * __scale__: The scale of the units associated with this variable
- * __isOutput__: Is this variable an output of the experiment
-
-```python
-response = setting.set("float", 0, 100, "linear", "Heating Temperature", 1, "Degrees Celcius", 1, False, options)
-```
-
 ### A Single Result api
 
 Manipulate a result set indexed by its id
@@ -422,6 +245,184 @@ The following arguments are required:
 
 ```python
 response = settings.get(1, options)
+```
+
+### <no value> api
+
+Return user list
+
+
+
+```python
+users = client.users()
+```
+
+##### Get user list (GET /users)
+
+<no value>
+
+
+
+```python
+response = users.getusers(options)
+```
+
+### Results Set api
+
+Manipulate the results set for an experiment given filters
+
+
+
+```python
+results = client.results()
+```
+
+##### Get Results Set (GET /alpha/results)
+
+Return a result set corresponding to an experiment
+
+The following arguments are required:
+
+
+```python
+response = results.get(1, 1, options)
+```
+
+##### Add a Result (POST /alpha/results/)
+
+Add a user created result
+
+The following arguments are required:
+
+ * __variables__: The result list of dictionary objects with updated fields.
+ * __task__: Task id
+ * __userProposed__: userProposed
+ * __description__: description
+ * __runDate__: <no value>
+
+```python
+response = results.add(
+], 1, True, "This is a result", "2014-02-22T21:20:35.889Z", options)
+```
+
+### Task Set api
+
+Returns the tasks set for a user
+
+
+
+```python
+tasks = client.tasks()
+```
+
+##### Get tasks set (GET /alpha/tasks)
+
+Return the task set corresponding to user
+
+
+
+```python
+response = tasks.get(options)
+```
+
+##### Create task (POST /alpha/tasks/)
+
+Creates a new task
+
+The following arguments are required:
+
+ * __name__: A short name for the task. Max 500 chars
+ * __description__: A detailed description of the task
+ * __settings__: The parameter specification of the parameters to tbe optimized
+
+```python
+response = tasks.create(1, "John Eggs", "Optimizing eggs specifically for Johns tastes", "A dictionary containing all the experimental settings", options)
+```
+
+### Suggest experiment api
+
+Ask the server to propose a new set of parameters to run the next experiment
+
+The following arguments are required:
+
+ * __taskid__: Identifier of corresponding task
+
+```python
+suggest = client.suggest(0)
+```
+
+##### Suggest experiment (POST /alpha/tasks/:taskid/suggest/)
+
+Ask the server to propose a new set of parameters to run the next experiment
+
+
+
+```python
+response = suggest.go(options)
+```
+
+### Experiments Set api
+
+Returns the experiments set for a user
+
+
+
+```python
+experiments = client.experiments()
+```
+
+##### Get experiments set (GET /alpha/experiments/)
+
+Return the experiments set corresponding to user
+
+
+
+```python
+response = experiments.get(options)
+```
+
+##### Create experiment (POST /alpha/experiments/)
+
+Create a new experiment and get the corresponding id
+
+The following arguments are required:
+
+ * __name__: The name of the experiment to be created.
+ * __description__: A detailed description of the experiment
+ * __user__: The user id of this user
+
+```python
+response = experiments.create("Johns Eggsperiment", "Optimizing the recipe for the perfect soft-boiled egg.", 4, options)
+```
+
+### An Experimental Setting api
+
+Manipulate an experimental settings object
+
+
+
+```python
+setting = client.setting()
+```
+
+##### Set Settings (POST /alpha/settings/)
+
+Set a setting corresponding to an experiment
+
+The following arguments are required:
+
+ * __name__: The name of the variable.
+ * __type__: The type of variable. One of int,float,etc.
+ * __min__: Minimum value for the variable
+ * __max__: Maximum value for the variable
+ * __size__: Vector size for the variable
+ * __units__: What units is the variable in?
+ * __experiment__: The experiment associated with this variable
+ * __scale__: The scale of the units associated with this variable
+ * __isOutput__: Is this variable an output of the experiment
+
+```python
+response = setting.set("Heating Temperature", 1, "Degrees Celcius", 1, False, "float", 0, 100, "linear", options)
 ```
 
 ## Contributors

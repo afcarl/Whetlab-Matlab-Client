@@ -210,8 +210,7 @@ classdef whetlab
                 rest_exps = rest_exps.results;                
                 for i = 1:numel(rest_exps)
                     expt = rest_exps{i};
-                    if (strcmp(expt.('description'), self.experiment_description) == 1 && ...
-                        strcmp(expt.('name'),self.experiment) == 1)
+                    if (strcmp(expt.('name'),self.experiment) == 1)
                         self.experiment_id = expt.id;
                         found = true;
                         break;
@@ -245,8 +244,7 @@ classdef whetlab
                 found = false;
                 for i = 1:numel(rest_tasks)
                     task = rest_tasks{i};
-                    if (strcmp(task.('name'),self.task) == 1 && ...
-                        strcmp(task.('description'), self.task_description) == 1)
+                    if (strcmp(task.('name'),self.task) == 1)                        
                         self.task_id = task.('id');
                         found = true;
                         break
@@ -450,14 +448,11 @@ classdef whetlab
         
         % Check whether this param_values has a result ID
         result_id = self.get_id(param_values);
-        
+
         if result_id == -1
             % - Add new results with param_values and outcome_val
-            result = self.client.results().add(self.task_id, true, '', '', struct()).body;
-            result_id = result.id;
 
             % Create variables for new result
-            variables = [];
             param_names = self.params_to_setting_ids.keySet().toArray();
             for i = 1:numel(param_names)
                 name = param_names(i);
@@ -468,23 +463,16 @@ classdef whetlab
                     value = outcome_val;
                 else
                     error('InvalidJobError',...
-                        'The job specified is invalid');                    
+                        'The job specified is invalid');
                 end
-                variables{end+1} = struct('setting', setting_id,...
-                    'result',result_id, 'name',name, 'value',value);                
+                variables(i) = struct('setting', setting_id,...
+                    'name',name, 'value',value);                
             end
-
             result.variables = variables;
-            try
-                res = self.client.result(num2str(result_id)).replace(...
-                    result.variables,result.task, result.userProposed,...
-                    result.description, result.runDate, result.id, struct());
-            catch err
-                % If the update fails for whatever reason (e.g. validation)
-                % we need to make sure we don't leave around empty results
-                self.client.result(num2str(result_id)).delete(struct());
-                rethrow(err);
-            end
+            result = self.client.results().add(variables, self.task_id, true, '', '', struct());
+            result = result.body;
+            result.task = self.task_id;
+            result_id = result.id;
 
             self.ids_to_param_values.put(result_id, savejson('',param_values));
         else
