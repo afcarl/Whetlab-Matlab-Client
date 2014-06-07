@@ -145,9 +145,9 @@ classdef whetlab
             if ~isfield(param,'type'), param.('type') = 'float'; end
             settings(i) = param;
 
-            f = param.fieldnames;
+            f = fieldnames(param);
             for j = 1:numel(f)
-                self.parameters(i).(f(j)) = param.(f(j));
+                self.parameters(i).(f{j}) = param.(f{j});
             end
         end
 
@@ -445,7 +445,7 @@ classdef whetlab
         % Convert the outcome to a constraint violation if it's not finite
         if ~isfinite(outcome_val)
             % This will be read in as Inf after being passed to the server
-            outcome_val = -1e999;
+            outcome_val = '-infinity';
         end
         
         % Check whether this param_values has a result ID
