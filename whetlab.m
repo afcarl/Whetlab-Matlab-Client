@@ -306,6 +306,12 @@ classdef whetlab
                 id = v.('id');
                 name = v.('name');                
                 if isequal(name, self.outcome_name)
+                    % Anything that's passed back as a string is assumed to be a
+                    % constraint violation.
+                    if isstr(v.value)
+                        v.value = -inf;
+                    end
+
                     % Don't record the outcome if the experiment is pending
                     if ~isempty(v.value)
                         self.ids_to_outcome_values.put(res_id, v.value);
@@ -442,12 +448,7 @@ classdef whetlab
         % :param outcome_val: Value of the outcome.
         % :type outcome_val: type defined for outcome
         %
-        % Convert the outcome to a constraint violation if it's not finite
-        if ~isfinite(outcome_val)
-            % This will be read in as Inf after being passed to the server
-            outcome_val = '-infinity';
-        end
-        
+                
         % Check whether this param_values has a result ID
         result_id = self.get_id(param_values);
 
@@ -463,6 +464,12 @@ classdef whetlab
                     value = param_values.(name);
                 elseif strcmp(name, self.outcome_name)
                     value = outcome_val;
+                    if ~isfinite(outcome_val)
+                        % Convert the outcome to a constraint violation if it's not finite
+                        % This is needed to send the JSON in a manner that will be parsed
+                        % correctly server-side.
+                        value = '-infinity'; 
+                    end
                 else
                     error('InvalidJobError',...
                         'The job specified is invalid');
