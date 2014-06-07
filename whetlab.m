@@ -71,7 +71,7 @@ classdef whetlab
        task_id = -1;
        experiment_id = -1;
        outcome_name = '';
-       parameters;
+       parameters = struct('name',{}, 'type', {}, 'min', {}, 'max', {}, 'size', {}, 'isOutput', {}, 'units',{},'scale',{});
 
        INF_PAGE_SIZE = 1000000;
 
@@ -101,7 +101,7 @@ classdef whetlab
         
         % Create REST server client
         hostname = 'http://localhost:8000/';
-        %hostname = 'http://api.whetlab.com/';
+        hostname = 'http://api.whetlab.com/';
         options = struct('user_agent', 'whetlab_matlab_client',...
             'api_version','api', 'base', hostname);
         options.headers.('Authorization') = ['Bearer ' access_token];
@@ -132,23 +132,19 @@ classdef whetlab
 
         % Create new experiment
         % Add specification of parameters        
-        self.parameters = parameters;
-        keys = fieldnames(parameters);        
-        for i = 1:numel(keys)
-            param = parameters.(keys{i});
+        for i = 1:numel(parameters)
+            param = parameters(i);
+
+            if ~isfield(param, 'name')
+                error('Whetlab:UnnamedParameterError', 'You must specify a name for each parameter.')
+            end
 
             % Add default parameters if not present
             if ~isfield(param,'units'), param.('units') = 'Reals'; end
             if ~isfield(param,'scale'), param.('scale') = 'linear'; end
             if ~isfield(param,'type'), param.('type') = 'float'; end
-
             settings(i) = param;
-            settings(i).name = keys{i};
-            
-            self.parameters.(keys{i}) = param;
-
-            % Record the setting ids
-            %self.params_to_setting_ids.put(keys{i}, res.body.id);
+            self.parameters(i) = param;
         end
 
         % Add the outcome variable
