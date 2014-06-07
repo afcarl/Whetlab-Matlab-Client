@@ -10,7 +10,7 @@ methods
         end
 
         % Return the experiments set corresponding to user
-        % '/alpha/experiments' GET
+        % '/alpha/experiments/' GET
         %
         function response = get(self, options)
                 if ~exist('options')
@@ -23,7 +23,7 @@ methods
                 end
                 
 
-                response = self.client.get(['/alpha/experiments'], body, options);
+                response = self.client.get(['/alpha/experiments/'], body, options);
 
         end
 

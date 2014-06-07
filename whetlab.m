@@ -67,10 +67,10 @@ classdef whetlab
        experiment            = '';
        task                  = '';
        task_description      = '';
-       experiment_description= '';       
+       experiment_description= '';
        task_id = -1;
        experiment_id = -1;
-       outcome_name;
+       outcome_name = '';
        parameters;
 
        INF_PAGE_SIZE = 1000000;
@@ -113,6 +113,7 @@ classdef whetlab
         self.experiment = name;
         self.task = name;
         self.task_description = description;
+        self.outcome_name = outcome.name;
 
         if resume
             % Try to resume if the experiment exists. If it doesn't exist, we'll create it.
@@ -130,50 +131,58 @@ classdef whetlab
         end
 
         % Create new experiment
-        user = 4;
-        res = self.client.experiments().create(name,description,user,struct());
-        experiment_id = res.body.('id');
-        self.experiment_id = experiment_id;
+        % Add specification of parameters        
+        self.parameters = parameters;
+        keys = fieldnames(parameters);        
+        for i = 1:numel(keys)
+            param = parameters.(keys{i});
 
-        % Create a task for this experiment.  If this fails, we need to destroy the experiment
-        try
-            task_name = self.task;
-            res = self.client.tasks().create(experiment_id,task_name,description,struct());
-            self.task_id = res.body.('id');
-            self.outcome_name = outcome.('name');
+            % Add default parameters if not present
+            if ~isfield(param,'units'), param.('units') = 'Reals'; end
+            if ~isfield(param,'scale'), param.('scale') = 'linear'; end
+            if ~isfield(param,'type'), param.('type') = 'float'; end
+
+            settings(i) = param;
+            settings(i).name = keys{i};
             
-            % Add specification of parameters to task
-            self.parameters = parameters;
-            keys = fieldnames(parameters);
-            for i = 1:numel(keys)
-                param = parameters.(keys{i});
+            self.parameters.(keys{i}) = param;
 
-                % Add default parameters if not present
-                if ~isfield(param,'units'), param.('units') = 'Reals'; end
-                if ~isfield(param,'scale'), param.('scale') = 'linear'; end
-                if ~isfield(param,'type'), param.('type') = 'float'; end
-                
-                self.parameters.(keys{i}) = param;
-                res = self.client.setting().set(num2str(keys{i}),...
-                    param.('type'), param.('min'), param.('max'),...
-                    param.('size'), param.('units'), experiment_id, ...
-                    param.('scale'), false, struct());
-
-                % Record the setting ids
-                self.params_to_setting_ids.put(keys{i}, res.body.id);
-            end
-        
-            % Add the outcome variable
-            param = struct('units','Reals', 'scale','linear', 'type','float');
-            outcome = self.structUpdate(param, outcome);
-            res = self.client.setting().set(outcome.('name'),...
-                outcome.('type'),-10.0,10.0,1,outcome.('units'),...
-                experiment_id, outcome.('scale'), true, struct());
-            self.params_to_setting_ids.put(outcome.name, res.body.id); 
-        catch
-            % Task creation failed.  Destroy the experiment to prevent taskless experiments.
-            res = self.client.experiment(num2str(experiment_id)).delete()
+            % Record the setting ids
+            %self.params_to_setting_ids.put(keys{i}, res.body.id);
         end
+
+        % Add the outcome variable
+        param = struct('units','Reals', 'scale','linear', 'type','float');
+        outcome = self.structUpdate(param, outcome);
+        settings(end+1) = self.structUpdate(settings(end), outcome);
+        settings(end).name = self.outcome_name;
+        settings(end).isOutput = true;
+        settings(end).min = -100;
+        settings(end).max = 100;
+        settings(end).size = 1;        
+
+        expt.name = name;
+        expt.description = description;
+        expt.settings = settings;
+        try
+            res = self.client.tasks().create(name, description, settings, struct());
+        catch err
+            err
+            err.message
+            if (resume && ...
+                strcmp(err.identifier, 'MATLAB:HttpConection:ConnectionError') && ...
+                ~isempty(strfind(err.message, 'Experiment with this User and Name already exists')))
+                self = self.sync_with_server();
+                return
+            else
+                % This experiment was just already created - race condition.
+                rethrow(err);
+            end
+        end
+        experiment_id = res.body.('experiment');
+        self.experiment_id = experiment_id;
+        task_id = res.body.('id');
+        self.task_id = task_id;
     end % Experiment()
 
     function self = sync_with_server(self)
@@ -302,7 +311,7 @@ classdef whetlab
                     % Don't record the outcome if the experiment is pending
                     if ~isempty(v.value)
                         self.ids_to_outcome_values.put(res_id, v.value);
-                    else % Treat NaN as the special indicator that the experiment is pending
+                    else % Treat NaN as the special indicator that the experiment is pending. We use -INF for constrant violations
                         self.ids_to_outcome_values.put(res_id, nan);
                     end
                 else
@@ -311,6 +320,12 @@ classdef whetlab
                 end
             end
         end
+
+        % Make sure that everything worked
+        assert(~isempty(self.outcome_name))
+        assert(self.experiment_id >= 0)
+        assert(self.task_id >= 0)
+
     end
 
     function pend = pending(self)
@@ -330,15 +345,15 @@ classdef whetlab
         ids = self.ids_to_outcome_values.keySet().toArray();
         outcomes = self.ids_to_outcome_values.values().toArray();
         outcomes = arrayfun(@(x)x, outcomes);
-        ret = [];
+        pend = [];
         for j = 1:length(outcomes)
             val = outcomes(j);
             if isnan(val)
                 ret(i) = loadjson(self.ids_to_param_values.get(ids(j)));
                 i = i + 1;
+                pend = ret;
             end
         end
-        pend = ret;
     end % pending()
 
     function clear_pending(self)
@@ -356,7 +371,9 @@ classdef whetlab
         % Suggest a new job.
         % :return: Values to assign to the parameters in the suggested job.
         % :rtype: struct
+        self.sync_with_server();
 
+        assert(self.task_id >= 0)
         res = self.client.suggest(num2str(self.task_id)).go(struct());
         res = res.body;
         result_id = res.('id');
@@ -390,7 +407,7 @@ classdef whetlab
     function id = get_id(self, param_values)
         % Return the result ID corresponding to the given ``param_values``.
         % If no result matches, return -1.
-
+        %
         % :param param_values: Values of parameters.
         % :type param_values: struct
         % :return: ID of the corresponding result. If not match, -1 is returned.
@@ -408,16 +425,32 @@ classdef whetlab
             end
         end
     end % get_id
+
+    function delete(self)
+        %%
+        % Delete the experiment with the given name and description.  
+        %
+        % Important, this cancels the experiment and removes all saved results!
+        %% 
+        res = self.client.experiment(str(self.experiment_id)).delete();
+        disp('Experiment has been deleted');
+    end
     
     function self = update(self, param_values, outcome_val)
         % Update the experiment with the outcome value associated with some parameter values.
-
+        %
         % :param param_values: Values of parameters.
         % :type param_values: struct
         % :param outcome_val: Value of the outcome.
         % :type outcome_val: type defined for outcome
-
-        % Check whether this param_values has a results ID
+        %
+        % Convert the outcome to a constraint violation if it's not finite
+        if ~isfinite(outcome_val)
+            % This will be read in as Inf after being passed to the server
+            outcome_val = -1e999;
+        end
+        
+        % Check whether this param_values has a result ID
         result_id = self.get_id(param_values);
         
         if result_id == -1
@@ -433,7 +466,7 @@ classdef whetlab
                 setting_id = self.params_to_setting_ids.get(name);
                 if isfield(param_values, name)
                     value = param_values.(name);
-                elseif strcmpi(name, self.outcome_name)
+                elseif strcmp(name, self.outcome_name)
                     value = outcome_val;
                 else
                     error('InvalidJobError',...

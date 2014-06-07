@@ -8,25 +8,6 @@ classdef whetlab_api_client
       end
       
 
-        % Manipulate a result set indexed by its id
-	%
-	% id - Identifier of a result
-	function response = result(x, id)
-		response = api.Result(id, x.httpclient);
-     end
-
-        % Returns the variables set for a user
-	%
-	function response = variables(x)
-		response = api.Variables(x.httpclient);
-     end
-
-        % Returns the settings config for an experiment
-	%
-	function response = settings(x)
-		response = api.Settings(x.httpclient);
-     end
-
         % Return user list
 	%
 	function response = users(x)
@@ -62,6 +43,32 @@ classdef whetlab_api_client
 	%
 	function response = setting(x)
 		response = api.Setting(x.httpclient);
+     end
+
+        % Manipulate a result set indexed by its id
+	%
+	% id - Identifier of a result
+	function response = result(x, id)
+		response = api.Result(id, x.httpclient);
+     end
+
+        % Returns the variables set for a user
+	%
+	function response = variables(x)
+		response = api.Variables(x.httpclient);
+     end
+
+        % Manipulate the experiment indexed by id.
+	%
+	% id - Identifier of corresponding experiment
+	function response = experiment(x, id)
+		response = api.Experiment(id, x.httpclient);
+     end
+
+        % Returns the settings config for an experiment
+	%
+	function response = settings(x)
+		response = api.Settings(x.httpclient);
      end
 
    end % methods
