@@ -40,6 +40,8 @@ classdef whetlab
     % :type outcome: struct
     % :param resume: Whether to resume a previously executed experiment. If True, ``parameters`` and ``outcome`` are ignored.
     % :type resume: bool
+    % :param force_resume: Whether to create a non-existing experiment if resume is true.
+    % :type force_resume: bool
     %
     % A Whetlab experiment instance will have the following variables:
     %
@@ -77,6 +79,25 @@ classdef whetlab
 
     end
 
+    methods(Static)
+        function delete_experiment(access_token, name)
+            %
+            % Delete the experiment with the given name.  
+            %
+            % Important, this cancels the experiment and removes all saved results!
+            %
+            % :param access_token: User access token
+            % :type access_token: str
+            % :param name: Experiment name
+            % :type name: str
+
+            % First make sure the experiment with name exists
+            outcome.name = '';
+            scientist = whetlab(name, '', access_token, [], outcome, true, false);
+            scientist.delete();
+        end
+    end
+
     methods
     function self = whetlab(...
              name,...
@@ -85,19 +106,20 @@ classdef whetlab
              parameters,...
              outcome,...
              resume,...
-             experiment_id,...
-             task_id)
+             force_resume)
 
         assert(usejava('jvm'),'This code requires Java');
         if (nargin == 5)
             resume = true;
         end
-        if (nargin < 7)
-            experiment_id = -1;
+        % Force the client to create the experiment if resume is true and it doesn't exist
+        if (nargin < 6)
+            force_resume = true;
         end
-        if (nargin < 8)
-            task_id = -1;
-        end
+
+
+        experiment_id = -1;
+        task_id = -1;
         
         % Create REST server client
         hostname = 'http://localhost:8000/';
@@ -124,7 +146,7 @@ classdef whetlab
                 disp(['Resuming experiment: ' self.experiment]);
                 return % Successfully resumed
             catch err
-                if ~strcmp(err.identifier, 'Whetlab:ExperimentNotFoundError')
+                if ~force_resume || ~strcmp(err.identifier, 'Whetlab:ExperimentNotFoundError')
                     rethrow(err);
                 end
             end
@@ -436,7 +458,7 @@ classdef whetlab
         %
         % Important, this cancels the experiment and removes all saved results!
         %% 
-        res = self.client.experiment(str(self.experiment_id)).delete();
+        res = self.client.experiment(num2str(self.experiment_id)).delete();
         disp('Experiment has been deleted');
     end
     
