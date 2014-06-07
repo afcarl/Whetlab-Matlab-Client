@@ -144,7 +144,11 @@ classdef whetlab
             if ~isfield(param,'scale'), param.('scale') = 'linear'; end
             if ~isfield(param,'type'), param.('type') = 'float'; end
             settings(i) = param;
-            self.parameters(i) = param;
+
+            f = param.fieldnames;
+            for j = 1:numel(f)
+                self.parameters(i).(f(j)) = param.(f(j));
+            end
         end
 
         % Add the outcome variable
