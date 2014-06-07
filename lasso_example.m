@@ -5,8 +5,7 @@
 addpath(genpath('.'));
 
 % Fill in with your whetlab access token.
-%accessToken = '6d70e340-a677-4e7e-af87-f1229a9a1f1e'; % john
-accessToken = 'f5f453f8-e38e-419f-81a1-14e674b81000';  % rpa
+accessToken = '';
 
 load ovarian_dataset;
 order = randperm(size(ovarianInputs,2)); % Grab a subset of data to make the problem harder.
