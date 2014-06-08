@@ -1,6 +1,7 @@
 classdef whetlab
-    
-    % A Whetlab tuning experiment.
+    % The interface to the Whetlab api.
+    % This client allows you to manipulate experiments in Whetlab
+    % and interact with the Whetlab server.
     %
     % A name and description for the experiment must be specified.
     % A Whetlab access token must also be provided.
@@ -109,11 +110,11 @@ classdef whetlab
              force_resume)
 
         assert(usejava('jvm'),'This code requires Java');
-        if (nargin == 5)
+        if (nargin == 6)
             resume = true;
         end
         % Force the client to create the experiment if resume is true and it doesn't exist
-        if (nargin < 6)
+        if (nargin < 7)
             force_resume = true;
         end
 

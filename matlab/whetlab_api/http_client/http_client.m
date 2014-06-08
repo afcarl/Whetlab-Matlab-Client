@@ -183,6 +183,7 @@ classdef http_client
                 if strcmp(method,'patch')
                     method = 'put';
                 end
+                try
                 if strcmp(method,'get')
                     [outputs,extras] = urlread2([url '?' paramString],...
                                                 upper(method), '', heads);
@@ -190,7 +191,15 @@ classdef http_client
                     [outputs,extras] = urlread2(url,upper(method), ...
                                                 paramString, heads);
                 end
-
+                catch
+                     s = lasterror();
+                     if strfind(s.message, 'java.net')
+                         error('MATLAB:HttpConection:ConnectionError',...
+                             'Could not connect to server.');                         
+                     else
+                         rethrow(s);
+                     end
+                end
                 % Display a reasonable amount of information if the
                 % Http request fails for whatever reason
                 if extras.isGood <= 0
