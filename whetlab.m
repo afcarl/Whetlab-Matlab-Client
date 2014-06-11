@@ -121,7 +121,7 @@ classdef whetlab
         experiment_id = -1;
         task_id = -1;
         
-        # Make a few obvious asserts
+        % Make a few obvious asserts
         if (isempty(name) || ~strcmp(class(name), 'char'))
             error('Whetlab:ValueError', 'Name of experiment must be a non-empty string.');
         end
