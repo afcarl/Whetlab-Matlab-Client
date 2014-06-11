@@ -190,8 +190,6 @@ classdef whetlab
         try
             res = self.client.tasks().create(name, description, settings, struct());
         catch err
-            err
-            err.message
             if (resume && ...
                 strcmp(err.identifier, 'MATLAB:HttpConection:ConnectionError') && ...
                 ~isempty(strfind(err.message, 'Experiment with this User and Name already exists')))
