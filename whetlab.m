@@ -51,30 +51,50 @@ classdef whetlab
     % :ivar outcome: Description of the outcome to maximize.
     % :type outcome: struct 
     properties(Access=protected)
-       client;
-       % Use native java hashtables
-       % These are for the client to keep track of things without always 
-       % querying the REST server ...
-       % ... From result IDs to client parameter values
-       ids_to_param_values   = java.util.Hashtable;
-       % ... From result IDs to outcome values
-       ids_to_outcome_values = java.util.Hashtable;
-       % ... From parameters to their 'ids'
-       params_to_setting_ids = java.util.Hashtable;
-       % All of the parameter values seen thus far
-       param_values          = java.util.Hashtable;
-       % All of the outcome values seen thus far
-       outcome_values        = java.util.Hashtable;
-       % The set of result IDs corresponding to suggested jobs that are pending
-       pending_ids           = [];
-       experiment            = '';
-       task                  = '';
-       task_description      = '';
-       experiment_description= '';
-       task_id = -1;
-       experiment_id = -1;
-       outcome_name = '';
-       parameters = struct('name',{}, 'type', {}, 'min', {}, 'max', {}, 'size', {}, 'isOutput', {}, 'units',{},'scale',{});
+        client;
+        % Use native java hashtables
+        % These are for the client to keep track of things without always 
+        % querying the REST server ...
+        % ... From result IDs to client parameter values
+        ids_to_param_values   = java.util.Hashtable;
+        % ... From result IDs to outcome values
+        ids_to_outcome_values = java.util.Hashtable;
+        % ... From parameters to their 'ids'
+        params_to_setting_ids = java.util.Hashtable;
+        % All of the parameter values seen thus far
+        param_values          = java.util.Hashtable;
+        % All of the outcome values seen thus far
+        outcome_values        = java.util.Hashtable;
+        % The set of result IDs corresponding to suggested jobs that are pending
+        pending_ids           = [];
+        experiment            = '';
+        task                  = '';
+        task_description      = '';
+        experiment_description= '';
+        task_id = -1;
+        experiment_id = -1;
+        outcome_name = '';
+        parameters = struct('name',{}, 'type', {}, 'min', {}, 'max', {}, 'size', {}, 'isOutput', {}, 'units',{},'scale',{});
+
+        % Validation things
+        supported_properties = struct('min',{}, 'max',{}, 'size',{}, 'scale', {},'units', {}, 'type', {});
+        required_properties = struct('min', {}, 'max', {});
+        default_values = struct('size',1, 'scale', 'linear', 'units', 'Reals', 'type', 'float');
+        % legal_values = struct('size', 1, 'scale', set(['linear','log']), 'type', set(['float', 'integer'])}
+
+        % python_types = {'float', float, 'integer', int}
+
+        % outcome_supported_properties = set(['units','type','name'])
+        % outcome_required_properties = set(['name'])
+        % outcome_default_values = {'min':-10.,
+        %           'max':10.,
+        %           'size':1,
+        %           'scale':'linear',
+        %           'units':'Reals',
+        %           'type':'float'}
+        % outcome_legal_values = {'size':set([1]),
+        %         'scale':set(['linear']),
+        %         'type':set(['float'])}
 
        INF_PAGE_SIZE = 1000000;
 
@@ -126,7 +146,7 @@ classdef whetlab
             error('Whetlab:ValueError', 'Name of experiment must be a non-empty string.');
         end
 
-        if (strcmp(class(description), 'char'))
+        if (~strcmp(class(description), 'char'))
             error('Whetlab:ValueError', 'Description of experiment must be a string.');
         end
 
@@ -183,10 +203,36 @@ classdef whetlab
                 error('Whetlab:UnnamedParameterError', 'You must specify a name for each parameter.')
             end
 
+            % Check if all properties are supported
+            if strcmp(param.('type'), 'enum')
+                error('Whetlab:ValueError', 'Enum types are not supported yet.  Please use integers instead.');
+            end
+
+            properties = param.fieldnames();
+            for ii = 1:numel(properties)
+                if ~isfield(supported_properties, properties{ii})
+                    error('Whetlab:ValueError', ['Parameter ' key ': property ' property ' is not supported.']);
+                end
+            end
+
+            % Check if required properties are present
+            properties = required_properties.fieldnames();
+            for ii = 1:numel(properties)
+                if ~isfield(param, properties{i})
+                    error('Whetlab:ValueError', ['Parameter ' key ': property ' property ' must be defined.']);
+                end
+            end
+
             % Add default parameters if not present
-            if ~isfield(param,'units'), param.('units') = 'Reals'; end
-            if ~isfield(param,'scale'), param.('scale') = 'linear'; end
-            if ~isfield(param,'type'), param.('type') = 'float'; end
+            if ~isfield(param,'units'), param.('units') = default_values.units; end
+            if ~isfield(param,'scale'), param.('scale') = default_values.scale; end
+            if ~isfield(param,'type'), param.('type') = default_values.type; end
+
+            # Check compatibility of properties
+            if param.('min') >= param.('max')
+                error('Whetlab:ValueError', ['Parameter ' key ': min should be smaller than max.']);
+            end
+
             settings(i) = param;
 
             f = fieldnames(param);
