@@ -80,23 +80,8 @@ classdef whetlab
         supported_properties = struct('min',{}, 'max',{}, 'size',{}, 'scale', {},'units', {}, 'type', {});
         required_properties = struct('min', {}, 'max', {});
         default_values = struct('size',1, 'scale', 'linear', 'units', 'Reals', 'type', 'float');
-        % legal_values = struct('size', 1, 'scale', set(['linear','log']), 'type', set(['float', 'integer'])}
 
-        % python_types = {'float', float, 'integer', int}
-
-        % outcome_supported_properties = set(['units','type','name'])
-        % outcome_required_properties = set(['name'])
-        % outcome_default_values = {'min':-10.,
-        %           'max':10.,
-        %           'size':1,
-        %           'scale':'linear',
-        %           'units':'Reals',
-        %           'type':'float'}
-        % outcome_legal_values = {'size':set([1]),
-        %         'scale':set(['linear']),
-        %         'type':set(['float'])}
-
-       INF_PAGE_SIZE = 1000000;
+        INF_PAGE_SIZE = 1000000;
 
     end
 
@@ -228,7 +213,7 @@ classdef whetlab
             if ~isfield(param,'scale'), param.('scale') = default_values.scale; end
             if ~isfield(param,'type'), param.('type') = default_values.type; end
 
-            # Check compatibility of properties
+            % Check compatibility of properties
             if param.('min') >= param.('max')
                 error('Whetlab:ValueError', ['Parameter ' key ': min should be smaller than max.']);
             end
