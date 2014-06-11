@@ -118,10 +118,18 @@ classdef whetlab
             force_resume = true;
         end
 
-
         experiment_id = -1;
         task_id = -1;
         
+        # Make a few obvious asserts
+        if (isempty(name) || ~strcmp(class(name), 'char'))
+            error('Whetlab:ValueError', 'Name of experiment must be a non-empty string.');
+        end
+
+        if (strcmp(class(description), 'char'))
+            error('Whetlab:ValueError', 'Description of experiment must be a string.');
+        end
+
         % Create REST server client
         hostname = 'http://localhost:8000/';
         hostname = 'http://api.whetlab.com/';
@@ -152,6 +160,19 @@ classdef whetlab
                 end
             end
         end
+
+        if ~strcmp(class(parameters), 'struct') 
+            error('Whetlab:ValueError', 'Parameters of experiment must be a structure array.');
+        end
+
+        if ~strcmp(class(outcome), 'struct') && ~isempty(fieldnames(outcome))
+            error('Whetlab:ValueError', 'Outcome of experiment must be a non-empty struct.');
+        end
+
+        if ~isfield(outome, 'name')
+            error('Whetlab:ValueError', 'Argument outcome should have a field called: name.');
+        end
+        self.outcome_name = outcome.name;
 
         % Create new experiment
         % Add specification of parameters        
@@ -469,7 +490,7 @@ classdef whetlab
         % :param outcome_val: Value of the outcome.
         % :type outcome_val: type defined for outcome
         %
-                
+
         % Check whether this param_values has a result ID
         result_id = self.get_id(param_values);
 
