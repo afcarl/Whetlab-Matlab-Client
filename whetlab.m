@@ -77,7 +77,7 @@ classdef whetlab
         parameters = struct('name',{}, 'type', {}, 'min', {}, 'max', {}, 'size', {}, 'isOutput', {}, 'units',{},'scale',{});
 
         % Validation things
-        supported_properties = struct('min',{}, 'max',{}, 'size',{}, 'scale', {},'units', {}, 'type', {});
+        supported_properties = struct('isOutput', {}, 'name', {}, 'min',{}, 'max',{}, 'size',{}, 'scale', {},'units', {}, 'type', {});
         required_properties = struct('min', {}, 'max', {});
         default_values = struct('size',1, 'scale', 'linear', 'units', 'Reals', 'type', 'float');
 
@@ -137,7 +137,7 @@ classdef whetlab
 
         % Create REST server client
         hostname = 'http://localhost:8000/';
-        hostname = 'http://api.whetlab.com/';
+        %hostname = 'http://api.whetlab.com/';
         options = struct('user_agent', 'whetlab_matlab_client',...
             'api_version','api', 'base', hostname);
         options.headers.('Authorization') = ['Bearer ' access_token];
@@ -174,7 +174,7 @@ classdef whetlab
             error('Whetlab:ValueError', 'Outcome of experiment must be a non-empty struct.');
         end
 
-        if ~isfield(outome, 'name')
+        if ~isfield(outcome, 'name')
             error('Whetlab:ValueError', 'Argument outcome should have a field called: name.');
         end
         self.outcome_name = outcome.name;
@@ -193,29 +193,29 @@ classdef whetlab
                 error('Whetlab:ValueError', 'Enum types are not supported yet.  Please use integers instead.');
             end
 
-            properties = param.fieldnames();
+            properties = fieldnames(param);
             for ii = 1:numel(properties)
-                if ~isfield(supported_properties, properties{ii})
-                    error('Whetlab:ValueError', ['Parameter ' key ': property ' property ' is not supported.']);
+                if ~isfield(self.supported_properties, properties{ii})
+                    error('Whetlab:ValueError', ['Parameter ' param.name ': property ' properties{ii} ' is not supported.']);
                 end
             end
 
             % Check if required properties are present
-            properties = required_properties.fieldnames();
+            properties = fieldnames(self.required_properties);
             for ii = 1:numel(properties)
-                if ~isfield(param, properties{i})
-                    error('Whetlab:ValueError', ['Parameter ' key ': property ' property ' must be defined.']);
+                if ~isfield(param, properties{ii})
+                    error('Whetlab:ValueError', ['Parameter ' param.name ': property ' properties{ii} ' must be defined.']);
                 end
             end
 
             % Add default parameters if not present
-            if ~isfield(param,'units'), param.('units') = default_values.units; end
-            if ~isfield(param,'scale'), param.('scale') = default_values.scale; end
-            if ~isfield(param,'type'), param.('type') = default_values.type; end
+            if ~isfield(param,'units'), param.('units') = self.default_values.units; end
+            if ~isfield(param,'scale'), param.('scale') = self.default_values.scale; end
+            if ~isfield(param,'type'), param.('type') = self.default_values.type; end
 
             % Check compatibility of properties
             if param.('min') >= param.('max')
-                error('Whetlab:ValueError', ['Parameter ' key ': min should be smaller than max.']);
+                error('Whetlab:ValueError', ['Parameter ' param.name ': min should be smaller than max.']);
             end
 
             settings(i) = param;
@@ -240,7 +240,7 @@ classdef whetlab
         expt.description = description;
         expt.settings = settings;
         try
-            res = self.client.tasks().create(name, description, settings, struct());
+            res = self.client.experiments().create(name, description, settings, struct());
         catch err
             if (resume && ...
                 strcmp(err.identifier, 'MATLAB:HttpConection:ConnectionError') && ...
@@ -252,10 +252,8 @@ classdef whetlab
                 rethrow(err);
             end
         end
-        experiment_id = res.body.('experiment');
+        experiment_id = res.body.('id');
         self.experiment_id = experiment_id;
-        task_id = res.body.('id');
-        self.task_id = task_id;
     end % Experiment()
 
     function self = sync_with_server(self)
@@ -304,37 +302,6 @@ classdef whetlab
             res = self.client.experiments().get(struct('query',struct('id',self.experiment_id))).body.('results');
             self.experiment = res{1}.('name');
             self.experiment_description = res{1}.('description');
-        end
-
-        if self.task_id < 0
-            page = 1;
-            more_pages = true;
-            while more_pages
-                rest_tasks = self.client.tasks().get(struct('query',struct('page',page, 'experiment',self.experiment_id))).body;
-                more_pages = ~isempty(rest_tasks.('next'));
-                page = page + 1;
-
-                % Find in current page whether we find the task we are looking for
-                rest_tasks = rest_tasks.('results');
-                found = false;
-                for i = 1:numel(rest_tasks)
-                    task = rest_tasks{i};
-                    if (strcmp(task.('name'),self.task) == 1)                        
-                        self.task_id = task.('id');
-                        found = true;
-                        break
-                    end
-                end
-            end
-            if ~found
-                error('Whetlab:TaskNotFoundError',...
-                    'Task with name \"%s\" and description \"%s\" not found.',...
-                     self.task, self.task_description);
-            end
-        else
-            res = self.client.tasks().get(struct('query',struct('id',self.task_id))).body.('results');
-            self.task = res{1}.('name');
-            self.task_description = res{1}.('description');                
         end
 
         % Get settings for this task, to get the parameter and outcome names
