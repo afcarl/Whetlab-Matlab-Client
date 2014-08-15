@@ -86,6 +86,18 @@ classdef whetlab
     end
 
     methods(Static)
+        function vars = read_dot_file()
+            vars = struct()
+            if exist('~/.whetlab', 'file') > 0
+                fid = fopen('~/.whetlab')
+                C = textscan(fid, '%s=%s', 'CommentStyle', '[')
+                fclose(fid)
+                for i = 1:length(C{1})
+                    vars.(C{1}{i}) = C{2}{i};
+                end
+            end
+        end
+
         function delete_experiment(access_token, name)
             %
             % Delete the experiment with the given name.  
@@ -105,6 +117,7 @@ classdef whetlab
     end
 
     methods
+
     function self = whetlab(...
              name,...
              description,...
@@ -125,6 +138,15 @@ classdef whetlab
 
         experiment_id = -1;
         task_id = -1;
+
+        vars = whetlab.read_dot_file()
+        if isempty(access_token)
+            try
+                access_token = vars.access_token
+            catch
+                error('You must specify your access token in the variable access_token either in the client or in your ~/.whetlab file')
+            end
+        end
         
         % Make a few obvious asserts
         if (isempty(name) || ~strcmp(class(name), 'char'))
@@ -136,8 +158,11 @@ classdef whetlab
         end
 
         % Create REST server client
-        hostname = 'http://localhost:8000/';
-        %hostname = 'http://api.whetlab.com/';
+        if isfield(vars, 'api_url')
+            hostname = vars.api_url;
+        else
+            hostname = 'https://api.whetlab.com';
+        end
         options = struct('user_agent', 'whetlab_matlab_client',...
             'api_version','api', 'base', hostname);
         options.headers.('Authorization') = ['Bearer ' access_token];
