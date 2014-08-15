@@ -51,12 +51,12 @@ methods
         % '/alpha/results/:id/' PATCH
         %
         % variables - The result list of dictionary objects with updated fields.
-        % task - Task id
+        % experiment - Experiment id
         % userProposed - userProposed
         % description - description
         % runDate - <no value>
         % id - <no value>
-        function response = update(self, variables, task, userProposed, description, runDate, id, options)
+        function response = update(self, variables, experiment, userProposed, description, runDate, id, options)
                 if ~exist('options')
                     options = struct;
                 end
@@ -67,7 +67,7 @@ methods
                 end
                 
                 body.variables = variables;
-                body.task = task;
+                body.experiment = experiment;
                 body.userProposed = userProposed;
                 body.description = description;
                 body.runDate = runDate;
@@ -86,7 +86,7 @@ methods
         % description - description
         % runDate - <no value>
         % id - <no value>
-        function response = replace(self, variables, task, userProposed, description, runDate, id, options)
+        function response = replace(self, variables, experiment, userProposed, description, runDate, id, options)
                 if ~exist('options')
                     options = struct;
                 end
@@ -97,7 +97,7 @@ methods
                 end
                 
                 body.variables = variables;
-                body.task = task;
+                body.experiment = experiment;
                 body.userProposed = userProposed;
                 body.description = description;
                 body.runDate = runDate;
