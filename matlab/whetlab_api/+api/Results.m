@@ -35,7 +35,7 @@ methods
         % userProposed - userProposed
         % description - description
         % runDate - <no value>
-        function response = add(self, variables, task, userProposed, description, runDate, options)
+        function response = add(self, variables, experiment, userProposed, description, runDate, options)
                 if ~exist('options')
                     options = struct;
                 end
@@ -46,7 +46,7 @@ methods
                 end
                 
                 body.variables = variables;
-                body.task = task;
+                body.experiment = experiment;
                 body.userProposed = userProposed;
                 body.description = description;
                 body.runDate = runDate;
