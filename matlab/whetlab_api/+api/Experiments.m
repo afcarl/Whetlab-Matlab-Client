@@ -33,7 +33,7 @@ methods
         % name - The name of the experiment to be created.
         % description - A detailed description of the experiment
         % user - The user id of this user
-        function response = create(self, name, description, user, options)
+        function response = create(self, name, description, settings, options)
                 if ~exist('options')
                     options = struct;
                 end
@@ -45,7 +45,7 @@ methods
                 
                 body.name = name;
                 body.description = description;
-                body.user = user;
+                body.settings = settings;
 
                 response = self.client.post(['/alpha/experiments/'], body, options);
 
