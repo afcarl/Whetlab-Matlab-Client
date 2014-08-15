@@ -3,11 +3,11 @@ classdef Suggest
 properties
   client = '';
   
-  taskid;
+  exptid;
 end
 methods
-	function x = Suggest(taskid, client)
-		x.taskid = taskid;
+	function x = Suggest(exptid, client)
+		x.exptid = exptid;
 		x.client = client;
         end
 
@@ -25,7 +25,7 @@ methods
                 end
                 
 
-                response = self.client.post(['/alpha/tasks/' self.taskid '/suggest/'], body, options);
+                response = self.client.post(['/alpha/experiments/' self.exptid '/suggest/'], body, options);
 
         end
 
