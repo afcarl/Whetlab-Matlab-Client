@@ -68,10 +68,7 @@ classdef whetlab
         % The set of result IDs corresponding to suggested jobs that are pending
         pending_ids           = [];
         experiment            = '';
-        task                  = '';
-        task_description      = '';
         experiment_description= '';
-        task_id = -1;
         experiment_id = -1;
         outcome_name = '';
         parameters = struct('name',{}, 'type', {}, 'min', {}, 'max', {}, 'size', {}, 'isOutput', {}, 'units',{},'scale',{});
@@ -87,14 +84,24 @@ classdef whetlab
 
     methods(Static)
         function vars = read_dot_file()
-            vars = struct()
+            vars = struct();
             if exist('~/.whetlab', 'file') > 0
-                fid = fopen('~/.whetlab')
-                C = textscan(fid, '%s=%s', 'CommentStyle', '[')
-                fclose(fid)
+                fid = fopen('~/.whetlab');
+                C = textscan(fid, '%s=%s', 'CommentStyle', '[');
+                fclose(fid);
                 for i = 1:length(C{1})
                     vars.(C{1}{i}) = C{2}{i};
                 end
+            end
+        end
+
+        % Convert from a struct to a cell 
+        function params = struct_2_cell_params(paramstruct)
+            f = fieldnames(paramstruct);
+            params = {};
+            for i = 1:length(f)
+                params{end+1} = f{i};
+                params{end+1} = paramstruct.(f{i});
             end
         end
 
@@ -137,17 +144,16 @@ classdef whetlab
         end
 
         experiment_id = -1;
-        task_id = -1;
 
-        vars = whetlab.read_dot_file()
+        vars = whetlab.read_dot_file();
         if isempty(access_token)
             try
-                access_token = vars.access_token
+                access_token = vars.access_token;
             catch
                 error('You must specify your access token in the variable access_token either in the client or in your ~/.whetlab file')
             end
         end
-        
+
         % Make a few obvious asserts
         if (isempty(name) || ~strcmp(class(name), 'char'))
             error('Whetlab:ValueError', 'Name of experiment must be a non-empty string.');
@@ -172,14 +178,11 @@ classdef whetlab
         % is the same as the experiment's
         self.experiment_description = description;
         self.experiment = name;
-        self.task = name;
-        self.task_description = description;
         self.outcome_name = outcome.name;
 
         if resume
             % Try to resume if the experiment exists. If it doesn't exist, we'll create it.
             self.experiment_id = experiment_id;
-            self.task_id = task_id;
             try
                 self = self.sync_with_server();
                 disp(['Resuming experiment: ' self.experiment]);
@@ -356,13 +359,15 @@ classdef whetlab
         end
 
         % Get results generated so far for this task
-        rest_results = self.client.results().get(struct('query',struct('task',self.task_id,'page_size', self.INF_PAGE_SIZE))).body.('results');
+        rest_results = self.client.results().get(struct('query',struct('experiment',self.experiment_id,'page_size', self.INF_PAGE_SIZE))).body.('results');
         % Construct things needed by client internally, to keep track of
         % all the results
+
         for i = 1:numel(rest_results)
             res = rest_results{i};
             res_id = res.('id');
             variables = res.('variables');
+            tmp = {};
 
             % Construct param_values hash and outcome_values
             for j = 1:numel(variables)
@@ -384,7 +389,8 @@ classdef whetlab
                         self.ids_to_outcome_values.put(res_id, nan);
                     end
                 else
-                    tmp.(v.('name')) = v.('value');
+                    tmp{end+1} = v.('name');
+                    tmp{end+1} = v.('value');
                     self.ids_to_param_values.put(res_id, savejson('',tmp));
                 end
             end
@@ -393,7 +399,6 @@ classdef whetlab
         % Make sure that everything worked
         assert(~isempty(self.outcome_name))
         assert(self.experiment_id >= 0)
-        assert(self.task_id >= 0)
 
     end
 
@@ -441,9 +446,7 @@ classdef whetlab
         % :return: Values to assign to the parameters in the suggested job.
         % :rtype: struct
         self.sync_with_server();
-
-        assert(self.task_id >= 0)
-        res = self.client.suggest(num2str(self.task_id)).go(struct());
+        res = self.client.suggest(num2str(self.experiment_id)).go(struct());
         res = res.body;
         result_id = res.('id');
         
@@ -481,6 +484,12 @@ classdef whetlab
         % :type param_values: struct
         % :return: ID of the corresponding result. If not match, -1 is returned.
         % :rtype: int or -1
+
+        % Convert to a cell array if params are specified as a struct.
+        % Cell arrays allow for spaces in the param names.
+        if isstruct(param_values)
+            param_values = whetlab.struct_2_cell_params(param_values);
+        end
 
         % First sync with the server
         self = self.sync_with_server();
@@ -543,10 +552,13 @@ classdef whetlab
                     'name',name, 'value',value);                
             end
             result.variables = variables;
-            result = self.client.results().add(variables, self.task_id, true, '', '', struct());
+            result = self.client.results().add(variables, self.experiment_id, true, '', '', struct());
             result = result.body;
-            result.task = self.task_id;
             result_id = result.id;
+
+            if isstruct(param_values)
+                param_values = whetlab.struct_2_cell_params(param_values)
+            end
 
             self.ids_to_param_values.put(result_id, savejson('',param_values));
         else
@@ -564,7 +576,7 @@ classdef whetlab
 
             self.param_values.put(result_id, savejson('',result));
             res = self.client.result(num2str(result_id)).replace(...
-                result.variables,result.task, result.userProposed,...
+                result.variables, result.experiment_id, result.userProposed,...
                 result.description, result.runDate, result.id, struct());
 
             % Remove this job from the pending list
@@ -688,7 +700,14 @@ classdef whetlab
         for i = 1:numel(ids)
             params = loadjson(self.ids_to_param_values.get(ids(i)));
             for j = 1:numel(param_names)
-                row(j) = params.(param_names{j});             
+                % Super inefficient but Matlab doesn't leave many nice options
+                % without the code becoming indecipherable
+                for k = 1:numel(params)
+                    if strcmp(params{k}, param_names{j})
+                        row(j) = params{k+1};
+                        break
+                    end
+                end
             end
             param_vals = [param_vals; [row, y(i)]];
         end
