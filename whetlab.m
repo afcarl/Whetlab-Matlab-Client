@@ -167,7 +167,7 @@ classdef whetlab
         if isfield(vars, 'api_url')
             hostname = vars.api_url;
         else
-            hostname = 'https://api.whetlab.com';
+            hostname = 'http://www.whetlab.com/';
         end
         options = struct('user_agent', 'whetlab_matlab_client',...
             'api_version','api', 'base', hostname);
@@ -576,8 +576,8 @@ classdef whetlab
 
             self.param_values.put(result_id, savejson('',result));
             res = self.client.result(num2str(result_id)).replace(...
-                result.variables, result.experiment_id, result.userProposed,...
-                result.description, result.runDate, result.id, struct());
+                result.variables, result.experiment, result.userProposed,...
+                result.description, result.createdDate, result.id, struct());
 
             % Remove this job from the pending list
             self.pending_ids(self.pending_ids == result_id) = [];
