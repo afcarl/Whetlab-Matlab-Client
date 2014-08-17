@@ -64,6 +64,48 @@ classdef test_whetlab < matlab.unittest.TestCase
 			end
 		end
 
+		%% Empty experiment names shouldn't work. 
+		function testMinGreaterThanMax(testCase)    
+		    parameters(1) = struct('name', 'Lambda', 'type','float',...
+		        'min',0.75,'max',0.25,'size',1, 'isOutput',false);
+		    parameters(2) = struct('name', 'Alpha', 'type','float',...
+		        'min',1e-4,'max',1,'size',1, 'isOutput', false);
+		    outcome.name = 'Negative deviance';
+
+			try
+				% Create a new experiment 
+				whetlab(testCase.default_expt_name,...
+	                    'Foo',...
+	                    testCase.default_access_token,...
+	                    parameters,...
+	                    outcome, true);
+			catch err
+				testCase.verifyTrue(strcmp(err.identifier, 'Whetlab:ValueError'));
+				testCase.verifySubstring(err.message, 'min should be smaller than max.');
+			end
+		end
+
+		%% Empty experiment names shouldn't work. 
+		function emptyOutcome(testCase)    
+		    parameters(1) = struct('name', 'Lambda', 'type','float',...
+		        'min',0.75,'max',1.25,'size',1, 'isOutput',false);
+		    parameters(2) = struct('name', 'Alpha', 'type','float',...
+		        'min',1e-4,'max',1,'size',1, 'isOutput', false);
+		    outcome.name = '';
+
+			try
+				% Create a new experiment 
+				whetlab(testCase.default_expt_name,...
+	                    'Foo',...
+	                    testCase.default_access_token,...
+	                    parameters,...
+	                    outcome, true);
+			catch err
+				testCase.verifyTrue(strcmp(err.identifier, 'MATLAB:HttpConection:ConnectionError'));
+				testCase.verifySubstring(err.message, 'required');
+			end
+		end
+
 		function FunctionTwotest(testCase)
 		% Test specific code
 		end
