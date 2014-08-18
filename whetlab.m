@@ -71,7 +71,7 @@ classdef whetlab
         experiment_description= '';
         experiment_id = -1;
         outcome_name = '';
-        parameters = struct('name',{}, 'type', {}, 'min', {}, 'max', {}, 'size', {}, 'isOutput', {}, 'units',{},'scale',{});
+        parameters = struct([struct('name',{}, 'type', {}, 'min', {}, 'max', {}, 'size', {}, 'isOutput', {}, 'units',{},'scale',{})]);
 
         % Validation things
         supported_properties = struct('isOutput', {}, 'name', {}, 'min',{}, 'max',{}, 'size',{}, 'scale', {},'units', {}, 'type', {});
@@ -334,16 +334,16 @@ classdef whetlab
 
         % Get settings for this task, to get the parameter and outcome names
         rest_parameters = self.client.settings().get(num2str(self.experiment_id), struct('query', struct('page_size', self.INF_PAGE_SIZE))).body.('results');
-        self.parameters = struct;
+        index = 1;
         for i = 1:numel(rest_parameters)
             param = rest_parameters{i};
             if(param.experiment ~= self.experiment_id); continue; end
             id = param.('id');
             name = param.('name');
-            type=param.('type');
-            min=param.('min');
-            max=param.('max');
-            size=param.('size');
+            vartype=param.('type');
+            minval=param.('min');
+            maxval=param.('max');
+            varsize=param.('size');
             units=param.('units');
             scale=param.('scale');
             isOutput=param.('isOutput');
@@ -353,8 +353,9 @@ classdef whetlab
             if isOutput
                 self.outcome_name = name;
             else
-                self.parameters.(name) = struct('type',type,'min',min,'max',max,...
-                             'size', size ,'units', units,'scale', scale);
+                self.parameters(index) = struct('name', name, 'type', vartype,'min',minval,'max',maxval,...
+                             'size', varsize,'isOutput', false, 'units', units,'scale', scale);
+                index = index + 1;
             end
         end
 
@@ -389,8 +390,9 @@ classdef whetlab
                         self.ids_to_outcome_values.put(res_id, nan);
                     end
                 else
-                    tmp{end+1} = v.('name');
-                    tmp{end+1} = v.('value');
+                    % tmp{end+1} = v.('name');
+                    % tmp{end+1} = v.('value');
+                    tmp.(v.('name')) = v.('value');
                     self.ids_to_param_values.put(res_id, savejson('',tmp));
                 end
             end
@@ -464,11 +466,12 @@ classdef whetlab
         end
         
         % Put in a nicer format
-        next = struct;
-        %f = fieldnames(variables);
+        % next = {};
         for i = 1:numel(variables)
             if ~strcmp(variables{i}.name, self.outcome_name);
                 next.(variables{i}.name) = variables{i}.value;
+                % next{end+1} = variables{i}.name;
+                % next{end+1} = variables{i}.value;
             end
         end        
 
@@ -487,9 +490,9 @@ classdef whetlab
 
         % Convert to a cell array if params are specified as a struct.
         % Cell arrays allow for spaces in the param names.
-        if isstruct(param_values)
-            param_values = whetlab.struct_2_cell_params(param_values);
-        end
+        % if isstruct(param_values)
+        %     param_values = whetlab.struct_2_cell_params(param_values);
+        % end
 
         % First sync with the server
         self = self.sync_with_server();
@@ -522,6 +525,9 @@ classdef whetlab
         % :param outcome_val: Value of the outcome.
         % :type outcome_val: type defined for outcome
         %
+        if (length(outcome_val) > 1) or ((isstruct(param_values) && length(param_values) > 1))
+            error('Whetlab:ValueError', 'Update does not accept more than one result at a time');
+        end
 
         % Check whether this param_values has a result ID
         result_id = self.get_id(param_values);
@@ -556,9 +562,9 @@ classdef whetlab
             result = result.body;
             result_id = result.id;
 
-            if isstruct(param_values)
-                param_values = whetlab.struct_2_cell_params(param_values)
-            end
+            % if isstruct(param_values)
+            %     param_values = whetlab.struct_2_cell_params(param_values)
+            % end
 
             self.ids_to_param_values.put(result_id, savejson('',param_values));
         else
@@ -596,7 +602,7 @@ classdef whetlab
         for i = 1:numel(param_values)
             id = self.get_id(param_values(i));
             
-            if id ~= -1
+            if id > 0
                 self.ids_to_param_values.remove(num2str(id));
 
                 % Delete from internals
@@ -624,7 +630,7 @@ classdef whetlab
         % Sync with the REST server     
         self = self.sync_with_server();
 
-        % Find ID of result with best outcome
+        % Find ID of result with best outcomeh
         ids = self.ids_to_outcome_values.keySet().toArray();
         outcomes = self.ids_to_outcome_values.values().toArray();
         outcomes = arrayfun(@(x)x, outcomes);
@@ -700,14 +706,7 @@ classdef whetlab
         for i = 1:numel(ids)
             params = loadjson(self.ids_to_param_values.get(ids(i)));
             for j = 1:numel(param_names)
-                % Super inefficient but Matlab doesn't leave many nice options
-                % without the code becoming indecipherable
-                for k = 1:numel(params)
-                    if strcmp(params{k}, param_names{j})
-                        row(j) = params{k+1};
-                        break
-                    end
-                end
+                row(j) = params.(param_names{j});
             end
             param_vals = [param_vals; [row, y(i)]];
         end
