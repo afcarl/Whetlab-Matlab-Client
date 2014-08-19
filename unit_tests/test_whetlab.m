@@ -1,3 +1,5 @@
+% A unit testing suite for the whetlab Matlab client.
+% To run, just add whetlab.m to your path and then type 'results = runtests('test_whetlab.m')'
 classdef test_whetlab < matlab.unittest.TestCase
 	properties
 		default_expt_name = 'Matlab test experiment';
@@ -257,12 +259,12 @@ classdef test_whetlab < matlab.unittest.TestCase
 			mins = min(vals,2);
 			maxes = max(vals,2);
 			alpha = ['a':'z' 'A':'Z'];
-			alphanumeric = ['a':'z' 'A':'Z' 0:9 '_'];
-			alphanumeric_punct = ['a':'z' 'A':'Z' 0:9 '_'];
+			alphanumeric = ['a':'z' 'A':'Z' '0':'9' '_'];
+			alphanumeric_punct = ['a':'z' 'A':'Z' '0':'9' '_!.#$%^&*()'];
 
 			for i = 1:50
 				name = [alpha(randi([1, length(alpha)])), ...
-				   alphanumeric(randi([1, length(alphanumeric)], nletters(i), 1))];%char(floor(94*rand(1, randi([1,100])) + 32));
+				   alphanumeric(randi([1, length(alphanumeric)], nletters(i), 1))];
 				parameters(i) = struct('name', name, 'type','float',...
 		          'min',mins(i),'max',maxes(i),'size',1, 'isOutput',false);
 			end
