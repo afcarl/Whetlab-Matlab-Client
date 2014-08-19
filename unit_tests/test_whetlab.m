@@ -254,7 +254,7 @@ classdef test_whetlab < matlab.unittest.TestCase
 		%% Try to create an already existing experiment with result set to false. 
 		function testRandomParameters(testCase)
 			N = 50;
-			nletters = randi([0, 63], N);			
+			nletters = randi([0, 62], N);			
 			vals = randn(N,2);
 			mins = min(vals,2);
 			maxes = max(vals,2);
