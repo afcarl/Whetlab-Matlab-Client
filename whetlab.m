@@ -194,8 +194,8 @@ classdef whetlab
             end
         end
 
-        if ~strcmp(class(parameters), 'struct') 
-            error('Whetlab:ValueError', 'Parameters of experiment must be a structure array.');
+        if ~strcmp(class(parameters), 'struct') && ~strcmp(class(parameters), 'cell')
+            error('Whetlab:ValueError', 'Parameters of experiment must be a structure array or a cell array.');
         end
 
         if ~strcmp(class(outcome), 'struct') && ~isempty(fieldnames(outcome))
@@ -208,45 +208,58 @@ classdef whetlab
         self.outcome_name = outcome.name;
 
         % Create new experiment
-        % Add specification of parameters        
+        % Add specification of parameters
+        settings = {};     
         for i = 1:numel(parameters)
-            param = parameters(i);
+            if isstruct(parameters)
+                param = parameters(i);
+            else % A cell array
+                param = parameters{i};
+            end
 
             if ~isfield(param, 'name')
                 error('Whetlab:UnnamedParameterError', 'You must specify a name for each parameter.')
             end
 
             % Check if all properties are supported
-            if strcmp(param.('type'), 'enum')
-                error('Whetlab:ValueError', 'Enum types are not supported yet.  Please use integers instead.');
-            end
-
-            properties = fieldnames(param);
-            for ii = 1:numel(properties)
-                if ~isfield(self.supported_properties, properties{ii})
-                    error('Whetlab:ValueError', ['Parameter ' param.name ': property ' properties{ii} ' is not supported.']);
-                end
-            end
-
-            % Check if required properties are present
-            properties = fieldnames(self.required_properties);
-            for ii = 1:numel(properties)
-                if ~isfield(param, properties{ii})
-                    error('Whetlab:ValueError', ['Parameter ' param.name ': property ' properties{ii} ' must be defined.']);
-                end
-            end
-
-            % Add default parameters if not present
-            if ~isfield(param,'units'), param.('units') = self.default_values.units; end
-            if ~isfield(param,'scale'), param.('scale') = self.default_values.scale; end
+            % if strcmp(param.('type'), 'enum')
+            %     error('Whetlab:ValueError', 'Enum types are not supported yet.  Please use integers instead.');
+            % end
             if ~isfield(param,'type'), param.('type') = self.default_values.type; end
 
-            % Check compatibility of properties
-            if param.('min') >= param.('max')
-                error('Whetlab:ValueError', ['Parameter ' param.name ': min should be smaller than max.']);
-            end
+            if strcmp(param.type, 'enum')
+                if ~isfield(param, 'options')  || numel(param.options) < 2
+                     error('Whetlab:ValueError', ['Parameter ' param.name ' is an enum type which requires the field options with more than one element.']);
+                end
+                % Add default parameters if not present
+                if ~isfield(param,'isOutput'), param.('isOutput') = false; end
+            else
+                properties = fieldnames(param);
+                for ii = 1:numel(properties)
+                    if ~isfield(self.supported_properties, properties{ii})
+                        error('Whetlab:ValueError', ['Parameter ' param.name ': property ' properties{ii} ' is not supported.']);
+                    end
+                end
 
-            settings(i) = param;
+                % Check if required properties are present
+                properties = fieldnames(self.required_properties);
+                for ii = 1:numel(properties)
+                    if ~isfield(param, properties{ii})
+                        error('Whetlab:ValueError', ['Parameter ' param.name ': property ' properties{ii} ' must be defined.']);
+                    end
+                end
+
+                % Add default parameters if not present
+                if ~isfield(param,'units'), param.('units') = self.default_values.units; end
+                if ~isfield(param,'scale'), param.('scale') = self.default_values.scale; end
+                if ~isfield(param,'isOutput'), param.('isOutput') = false; end
+
+                % Check compatibility of properties
+                if param.('min') >= param.('max')
+                    error('Whetlab:ValueError', ['Parameter ' param.name ': min should be smaller than max.']);
+                end
+            end
+            settings{i} = param;
 
             f = fieldnames(param);
             for j = 1:numel(f)
@@ -255,18 +268,12 @@ classdef whetlab
         end
 
         % Add the outcome variable
-        param = struct('units','Reals', 'scale','linear', 'type','float');
+        param = struct('units','Reals', 'scale','linear', 'type','float', 'isOutput', true, 'min',-100, 'max', 100, 'size',1);
         outcome = self.structUpdate(param, outcome);
-        settings(end+1) = self.structUpdate(settings(end), outcome);
-        settings(end).name = self.outcome_name;
-        settings(end).isOutput = true;
-        settings(end).min = -100;
-        settings(end).max = 100;
-        settings(end).size = 1;        
-
-        expt.name = name;
-        expt.description = description;
-        expt.settings = settings;
+        % outcome = self.structUpdate(settings(end), outcome);
+        outcome.name = self.outcome_name;
+        settings{end+1} = outcome;    
+        savejson(settings)
         try
             res = self.client.experiments().create(name, description, settings, struct());
         catch err
@@ -334,7 +341,7 @@ classdef whetlab
 
         % Get settings for this task, to get the parameter and outcome names
         rest_parameters = self.client.settings().get(num2str(self.experiment_id), struct('query', struct('page_size', self.INF_PAGE_SIZE))).body.('results');
-        index = 1;
+        self.parameters = {};
         for i = 1:numel(rest_parameters)
             param = rest_parameters{i};
             if(param.experiment ~= self.experiment_id); continue; end
@@ -353,9 +360,15 @@ classdef whetlab
             if isOutput
                 self.outcome_name = name;
             else
-                self.parameters(index) = struct('name', name, 'type', vartype,'min',minval,'max',maxval,...
-                             'size', varsize,'isOutput', false, 'units', units,'scale', scale);
-                index = index + 1;
+                if ~strcmp(vartype, 'enum')
+                    self.parameters{end+1} = struct('name', name, 'type', vartype,'min',minval,'max',maxval,...
+                                 'size', varsize,'isOutput', false, 'units', units,'scale', scale);
+                elseif strcmp(vartype, 'enum')
+                    self.parameters{end+1} = struct('name', name, 'type', vartype,'min',minval,'max',maxval,...
+                                 'size', varsize,'isOutput', false, 'units', units,'scale', scale);
+                else
+                    error('Whetlab:ValueError', ['Type ' vartype ' not supported for variable ' name]);
+                end                    
             end
         end
 
@@ -544,10 +557,12 @@ classdef whetlab
                     value = param_values.(name);
                 elseif strcmp(name, self.outcome_name)
                     value = outcome_val;
-                    if ~isfinite(outcome_val)
-                        % Convert the outcome to a constraint violation if it's not finite
-                        % This is needed to send the JSON in a manner that will be parsed
-                        % correctly server-side.
+                    % Convert the outcome to a constraint violation if it's not finite
+                    % This is needed to send the JSON in a manner that will be parsed
+                    % correctly server-side.
+                    if isnan(outcome_val)
+                        value = 'NaN';
+                    elseif ~isfinite(outcome_val)
                         value = '-infinity'; 
                     end
                 else
@@ -572,9 +587,16 @@ classdef whetlab
 
             for i = 1:numel(result.variables)
                 var = result.variables{i};
-
-                if isequal(var.('name'), self.outcome_name)
+                if strcmp(var.('name'), self.outcome_name)
+                    % Convert the outcome to a constraint violation if it's not finite
+                    % This is needed to send the JSON in a manner that will be parsed
+                    % correctly server-side.                    
                     result.variables{i}.('value') = outcome_val;
+                    if isnan(outcome_val)
+                        result.variables{i}.('value') = 'NaN';
+                    elseif ~isfinite(outcome_val)
+                        result.variables{i}.('value') = '-infinity';
+                    end
                     self.outcome_values.put(result_id, savejson('',var));
                     break % Assume only one outcome per experiment!
                 end
