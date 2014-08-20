@@ -68,6 +68,31 @@ classdef test_whetlab < matlab.unittest.TestCase
 		    testCase.verifyFalse(isequaln(job, job2));
 		end
 
+		function testLargerSizes(testCase)
+			size1 = randi([1 10], 1);
+			size2 = randi([1 10], 1);
+		    parameters(1) = struct('name', 'Lambda', 'type','float',...
+		        'min',1e-4,'max',0.75,'size', size1, 'isOutput',false);
+		    parameters(2) = struct('name', 'Alpha', 'type','float',...
+		        'min',1e-4,'max',1,'size', size2, 'isOutput',false);
+		    outcome.name = 'Negative deviance';
+
+		    % Create a new experiment 
+		    scientist = whetlab(testCase.default_expt_name,...
+		                    'Foo',...
+		                    testCase.default_access_token,...
+		                    parameters,...
+		                    outcome, true);
+		    
+		    job = scientist.suggest();
+		    testCase.verifyEqual(numel(job.Lambda), size1);
+		    testCase.verifyEqual(numel(job.Alpha), size2);
+		    job2 = scientist.suggest();
+		    testCase.verifyEqual(numel(job2.Lambda), size1);
+		    testCase.verifyEqual(numel(job2.Alpha), size2);
+		    testCase.verifyFalse(isequaln(job, job2));
+		end
+
 		% Make sure what we pass to the server doesn't get
 		% clobbered somehow.
 		function testBestExperiment(testCase)
