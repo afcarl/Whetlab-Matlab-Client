@@ -42,13 +42,3 @@ for i = 1:n_iterations
     scientist.update(job,negDeviance);
     scientist.report(); % Plot our progress
 end
-
-%Let Matlab do crossvalidation with a grid search to find the best Lambda.
-[B_CV,FitInfo_CV] = lassoglm(X,Y,'binomial',...
-    'NumLambda',25,'CV',10);
-lassoPlot(B_CV,FitInfo_CV,'PlotType','CV');
-
-% Plot the crossvalidation results against the whetlab results
-figure(1); hold on; 
-plot(FitInfo_CV.Deviance,'b:', 'Marker','x', 'LineWidth', 3);
-legend('Outcomes', 'Best so far', 'Crossvalidation');
