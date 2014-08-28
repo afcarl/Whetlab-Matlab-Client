@@ -1,55 +1,64 @@
 classdef whetlab
-    % The interface to the Whetlab api.
+    %% whetlab(name, description, access_token, parameters, outcome, resume)
+    %
+    % Instantiate a Whetlab client.
     % This client allows you to manipulate experiments in Whetlab
     % and interact with the Whetlab server.
     %
     % A name and description for the experiment must be specified.
     % A Whetlab access token must also be provided.
     % The parameters to tune in the experiment are specified by
-    % ``parameters``. It should be a ``struct``, where the fields are
-    % the parameters (``str``) and values are ``struct`` that
+    % _parameters_. It should be a _struct_, where the fields are
+    % the parameters (_str_) and values are _struct_ that
     % provide information about these parameters. Each of these
-    % ``struct`` should contain the appropriate keys to properly describe
+    % _struct_ should contain the appropriate keys to properly describe
     % the parameter:
     %
-    % * ``'type'``: type of the parameter (default: ``'float'``)
-    % * ``'min'``: minimum value of the parameter
-    % * ``'max'``: maximum value of the parameter
-    % * ``'size'``: size of parameter (default: ``1``)
-    % * ``'units'``: units (``str``) in which the parameter is measured
-    % * ``'scale'``: scale to use when exploring parameter values (default: ``'linear'``)
+    % * _type_: type of the parameter (default: _float_)
+    % * _min_: minimum value of the parameter
+    % * _max_: maximum value of the parameter
+    % * _size_: size of parameter (default: _1_)
+    % * _units_: units (_str_) in which the parameter is measured
+    % * _scale_: scale to use when exploring parameter values (default: _linear_)
     %
-    % Outcome should also be a ``struct``, describing the outcome. It
+    % Outcome should also be a _struct_, describing the outcome. It
     % should have the fields:
     %
-    % * ``'name'``: name (``str``) for the outcome being optimized
-    % * ``'type'``: type of the outcome (default: ``'float'``)
+    % * _name_: name (_str_) for the outcome being optimized
+    % * _type_: type of the outcome (default: _float_)
     %
     % Finally, experiments can be resumed from a previous state.
-    % To do so, ``name`` must match a previously created experiment
-    % and argument ``resume`` must be set to ``True`` (default is ``False``).
+    % To do so, _name_ must match a previously created experiment
+    % and argument _resume_ must be set to _True_ (default is _False_).
     %
-    % :param name: Name of the experiment.
-    % :type name: str
-    % :param description: Description of the experiment.
-    % :type description: str
-    % :param access_token: Access token for your Whetlab account.
-    % :type access_token: str
-    % :param parameters: Parameters to be tuned during the experiment.
-    % :type parameters: struct
-    % :param outcome: Description of the outcome to maximize.
-    % :type outcome: struct
-    % :param resume: Whether to resume a previously executed experiment. If True, ``parameters`` and ``outcome`` are ignored.
-    % :type resume: bool
-    % :param force_resume: Whether to create a non-existing experiment if resume is true.
-    % :type force_resume: bool
+    % * *name*(str): Name of the experiment.
+    % * *description*(str): Description of the experiment.
+    % * *access_token*(str): Access token for your Whetlab account.
+    % * *parameters*(struct, cell array): Parameters to be tuned during the experiment.
+    % * *outcome*(struct): Description of the outcome to maximize.
+    % * *resume*(boolean): Whether to resume a previously executed experiment. If True, _parameters_ and _outcome_ are ignored.
+    % * *force_resume*(boolean): Whether to create a non-existing experiment if resume is true.
     %
     % A Whetlab experiment instance will have the following variables:
     %
-    % :ivar parameters: Parameters to be tuned during the experiment.
-    % :type parameters: struct
-    % :ivar outcome: Description of the outcome to maximize.
-    % :type outcome: struct 
+    % * *parameters*(struct): Parameters to be tuned during the experiment.
+    % * *outcome*(struct): Description of the outcome to maximize.
+    %
+    % Example usage
+    %
+    %   % Create a new experiment 
+    %   name = 'A descriptive name';
+    %   description = 'The description of the experiment';
+    %   accessToken = ''; % Assume this is specified in ~/.whetlab
+    %   parameters = {struct('name', 'Lambda', 'type','float', 'min', 1e-4, 'max', 0.75, 'size', 1),...
+    %                 struct('name', 'Alpha', 'type', 'float', 'min', 1e-4, 'max',1, 'size', 1)};
+    %   outcome.name = 'Accuracy';    
+    %   scientist = whetlab(name,...
+    %               description,...
+    %               accessToken,...
+    %               parameters,...
+    %               outcome, true);
+    
     properties(Access=protected)
         client;
         % Use native java hashtables
@@ -106,16 +115,21 @@ classdef whetlab
         end
 
         function delete_experiment(access_token, name)
+            %% delete_experiment(access_token, name)
             %
             % Delete the experiment with the given name.  
             %
             % Important, this cancels the experiment and removes all saved results!
             %
-            % :param access_token: User access token
-            % :type access_token: str
-            % :param name: Experiment name
-            % :type name: str
-
+            % * *access_token*(str): User access token
+            % * *name*(str): Experiment name
+            % 
+            % Example usage
+            %
+            %   % Delete the experiment and all corresponding results.
+            %   access_token = ''; % Assume this is taken from ~/.whetlab
+            %   whetlab.delete_experiment(access_token, 'My Experiment');
+        
             % First make sure the experiment with name exists
             outcome.name = '';
             scientist = whetlab(name, '', access_token, [], outcome, true, false);
@@ -273,7 +287,6 @@ classdef whetlab
         % outcome = self.structUpdate(settings(end), outcome);
         outcome.name = self.outcome_name;
         settings{end+1} = outcome;    
-        savejson(settings)
         try
             res = self.client.experiments().create(name, description, settings, struct());
         catch err
@@ -292,9 +305,20 @@ classdef whetlab
     end % Experiment()
 
     function self = sync_with_server(self)
-        %%
-        %% Synchronize the client's internals with the REST server.
-        %%
+        %% sync_with_server(self)
+        %
+        % Synchronize the client's internals with the REST server.
+        %
+        % Example usage
+        %
+        %   % Create a new experiment 
+        %   scientist = whetlab(name,...
+        %               description,...
+        %               accessToken,...
+        %               parameters,...
+        %               outcome, true);
+        %
+        %   scientist.sync_with_server()
 
         % Reset internals
         self.ids_to_param_values.clear();
@@ -418,13 +442,24 @@ classdef whetlab
     end
 
     function pend = pending(self)
-        %%
-        %Return the list of jobs which have been suggested, but for which no 
-        %result has been provided yet.
+        %% pend = pending(self)
+        % Return the list of jobs which have been suggested, but for which no 
+        % result has been provided yet.
         %
-        %return: Struct array of parameter values.
-        %rtype: struct array
-        %%
+        % * *returns:* Struct array of parameter values.
+        % * *return type:* struct array
+        % 
+        % Example usage
+        %
+        %   % Create a new experiment 
+        %   scientist = whetlab(name,...
+        %               description,...
+        %               accessToken,...
+        %               parameters,...
+        %               outcome, true);
+        %
+        %   % Get the list of pending experiments
+        %   pend = scientist.pending()
     
         % Sync with the REST server     
         self.sync_with_server()
@@ -446,10 +481,25 @@ classdef whetlab
     end % pending()
 
     function clear_pending(self)
-        %%
-        %Delete all of the jobs which have been suggested but for which no 
-        %result has been provided yet (i.e. pending jobs).
-        %%
+        %% clear_pending(self)
+        % Delete all of the jobs which have been suggested but for which no 
+        % result has been provided yet (i.e. pending jobs).
+        %
+        % This is a utility function that makes it easy to clean up
+        % orphaned experiments.
+        %
+        % Example usage
+        %
+        %   % Resume an experiment 
+        %   scientist = whetlab(name,...
+        %               description,...
+        %               accessToken,...
+        %               parameters,...
+        %               outcome, true);
+        %
+        %   % Clear all of orphaned pending experiments
+        %   scientist.clear_pending()
+        
         jobs = self.pending();
         if ~isempty(jobs)
             self.cancel(jobs);
@@ -457,9 +507,30 @@ classdef whetlab
         self = self.sync_with_server();
     end        
     function next = suggest(self)
+        %% next = suggest(self)
         % Suggest a new job.
-        % :return: Values to assign to the parameters in the suggested job.
-        % :rtype: struct
+        % 
+        % This function sends a request to Whetlab to suggest a new
+        % experiment to run.  It may take some time to return while waiting
+        % for the suggestion to complete on the server.
+        %
+        % This function returns struct containing parameter names and 
+        % corresponding values detailing a new experiment to be run.
+        %
+        % * *returns:* Values to assign to the parameters in the suggested job.
+        % * *return type:* struct
+        % Example usage
+        %
+        %   % Create a new experiment 
+        %   scientist = whetlab(name,...
+        %               description,...
+        %               accessToken,...
+        %               parameters,...
+        %               outcome, true);
+        %
+        %   % Get a new experiment to run.
+        %   job = scientist.suggest();
+        
         self.sync_with_server();
         res = self.client.suggest(num2str(self.experiment_id)).go(struct());
         res = res.body;
@@ -493,14 +564,30 @@ classdef whetlab
     end % suggest
 
     function id = get_id(self, param_values)
-        % Return the result ID corresponding to the given ``param_values``.
+        %% id = get_id(self, param_values)
+        % Return the result ID corresponding to the given _param_values_.
         % If no result matches, return -1.
         %
-        % :param param_values: Values of parameters.
-        % :type param_values: struct
-        % :return: ID of the corresponding result. If not match, -1 is returned.
-        % :rtype: int or -1
-
+        % * *param_values*(struct): Values of parameters.
+        % * *returns:* ID of the corresponding result. If not match, -1 is returned.
+        % * *return type:* int or -1
+        %
+        % Example usage
+        %
+        %   % Resume an experiment 
+        %   scientist = whetlab(name,...
+        %               description,...
+        %               accessToken,...
+        %               parameters,...
+        %               outcome, true);
+        %
+        %   % Get a new experiment to run
+        %   job = scientist.suggest();
+        %   
+        %   % Get the corresponding experiment id.
+        %   id = scientist.get_id(job);
+        
+        
         % Convert to a cell array if params are specified as a struct.
         % Cell arrays allow for spaces in the param names.
         % if isstruct(param_values)
@@ -521,22 +608,50 @@ classdef whetlab
     end % get_id
 
     function delete(self)
-        %%
-        % Delete the experiment with the given name and description.  
+        %% delete(self)
+        %
+        % Delete this experiment.  
         %
         % Important, this cancels the experiment and removes all saved results!
-        %% 
+        %
+        % Example usage
+        %
+        %   % Create a new experiment 
+        %   scientist = whetlab(name,...
+        %               description,...
+        %               accessToken,...
+        %               parameters,...
+        %               outcome, true);
+        %
+        %   % Delete this experiment and all corresponding results.
+        %   scientist.delete()
+        
         res = self.client.experiment(num2str(self.experiment_id)).delete();
         disp('Experiment has been deleted');
     end
     
     function self = update(self, param_values, outcome_val)
+        %% update(self, param_values, outcome_val)
         % Update the experiment with the outcome value associated with some parameter values.
+        % This informs Whetlab of the resulting outcome corresponding to
+        % the experiment specified by _param_values_.  _param_values_ can 
+        % correspond to an experiment suggested by Whetlab or an
+        % independently run (user proposed) experiment.
         %
-        % :param param_values: Values of parameters.
-        % :type param_values: struct
-        % :param outcome_val: Value of the outcome.
-        % :type outcome_val: type defined for outcome
+        % * *param* param_values: Values of parameters.
+        % * *type* param_values: struct
+        % * *param* outcome_val: Value of the outcome.
+        % * *type* outcome_val: type defined for outcome
+        % 
+        % Example usage
+        % 
+        %   % Assume that a whetlab instance has been instantiated in
+        %   scientist.
+        %   job = scientist.suggest(); % Get a suggestion
+        %   % Run an experiment with the suggested parameters
+        %   and record the result.
+        %   result = 1.7;  
+        %   scientist.update(job, result);
         %
         if (length(outcome_val) > 1) or ((isstruct(param_values) && length(param_values) > 1))
             error('Whetlab:ValueError', 'Update does not accept more than one result at a time');
@@ -613,13 +728,24 @@ classdef whetlab
         self.ids_to_outcome_values.put(result_id, outcome_val);
     end %update
     
-    %% Cancel a job by removing the parameters and result. 
     function self = cancel(self,param_values)
+        %% cancel(self,param_values)
         % Cancel a job, by removing it from the jobs recorded so far in the experiment.
         %
-        % :param param_values: Values of the parameters for the job to cancel.
-        % :type param_values: struct or struct array
+        % * *param_values*(struct): Values of the parameters for the job to cancel.
         %
+        % Example usage
+        % 
+        %   % Assume that a whetlab instance has been instantiated in
+        %   scientist.
+        %   job = scientist.suggest(); % Get a suggestion
+        %   % Run an experiment with the suggested parameters
+        %   and record the result.
+        %   result = 1.7;  
+        %   scientist.update(job, result);
+        %   % Tell Whetlab to forget about that experiment (perhaps the result was an error).
+        %   scientist.cancel(job);
+        
         % Check whether this param_values has a results ID
         for i = 1:numel(param_values)
             id = self.get_id(param_values(i));
@@ -644,10 +770,23 @@ classdef whetlab
     end % cancel
     
     function param_values = best(self)
-        %% Return job with best outcome found so far.        
-        %%
-        %% :return: Parameter values with best outcome.
-        %% :rtype: struct
+        %% param_values = best(self)
+        % Return the job with best outcome found so far.        
+        %
+        % * *returns:* Parameter values corresponding to the best outcome.
+        % * *return type:* struct
+        %
+        % Example usage
+        %
+        %   % Resume an experiment 
+        %   scientist = whetlab(name,...
+        %               description,...
+        %               accessToken,...
+        %               parameters,...
+        %               outcome, true);
+        %
+        %   % Get the best job seen so far.
+        %   best = scientist.best();
 
         % Sync with the REST server     
         self = self.sync_with_server();
@@ -672,7 +811,21 @@ classdef whetlab
     end % best
         
     function report(self)
-        %% Plot a visual report of the progress made so far in the experiment.
+        %% report(self)
+        % Plot a visual report of the progress made so far in the experiment.
+        %
+        % Example usage
+        %
+        %   % Resume an experiment 
+        %   scientist = whetlab(name,...
+        %               description,...
+        %               accessToken,...
+        %               parameters,...
+        %               outcome, true);
+        %
+        %   % Visualize the results so far.
+        %   scientist.report();
+        
         % Sync with the REST server
         self = self.sync_with_server();
 
@@ -736,6 +889,7 @@ classdef whetlab
         uitable('Data', param_vals, 'ColumnName', param_names);
 
     end % report
+    
     % Update struct first with new properties from struct second
     function first = structUpdate(self, first, second)
         f = fieldnames(second);
