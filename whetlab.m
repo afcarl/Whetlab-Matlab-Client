@@ -8,51 +8,52 @@ classdef whetlab
     % A name and description for the experiment must be specified.
     % A Whetlab access token must also be provided.
     % The parameters to tune in the experiment are specified by
-    % _parameters_. It should be a _struct_, where the fields are
-    % the parameters (_str_) and values are _struct_ that
+    % ``parameters``. It should be a ``struct``, where the fields are
+    % the parameters (``str``) and values are ``struct`` that
     % provide information about these parameters. Each of these
-    % _struct_ should contain the appropriate keys to properly describe
+    % ``struct`` should contain the appropriate keys to properly describe
     % the parameter:
     %
-    % * _type_: type of the parameter (default: _float_)
-    % * _min_: minimum value of the parameter
-    % * _max_: maximum value of the parameter
-    % * _size_: size of parameter (default: _1_)
-    % * _units_: units (_str_) in which the parameter is measured
-    % * _scale_: scale to use when exploring parameter values (default: _linear_)
+    % * **type**: type of the parameter (default: ``float``)
+    % * **min**: minimum value of the parameter
+    % * **max**: maximum value of the parameter
+    % * **size**: size of parameter (default: ``1``)
+    % * **units**: units (``str``) in which the parameter is measured
+    % * **scale**: scale to use when exploring parameter values (default: ``linear``)
     %
     % Outcome should also be a _struct_, describing the outcome. It
     % should have the fields:
     %
-    % * _name_: name (_str_) for the outcome being optimized
-    % * _type_: type of the outcome (default: _float_)
+    % * *name*: name (``str``) for the outcome being optimized
+    % * *type*: type of the outcome (default: ``float``)
     %
     % Finally, experiments can be resumed from a previous state.
-    % To do so, _name_ must match a previously created experiment
-    % and argument _resume_ must be set to _True_ (default is _False_).
+    % To do so, ``name`` must match a previously created experiment
+    % and argument ``resume`` must be set to ``True`` (default is ``False``).
     %
-    % * *name*(str): Name of the experiment.
-    % * *description*(str): Description of the experiment.
-    % * *access_token*(str): Access token for your Whetlab account.
-    % * *parameters*(struct, cell array): Parameters to be tuned during the experiment.
-    % * *outcome*(struct): Description of the outcome to maximize.
-    % * *resume*(boolean): Whether to resume a previously executed experiment. If True, _parameters_ and _outcome_ are ignored.
-    % * *force_resume*(boolean): Whether to create a non-existing experiment if resume is true.
+    % * *name* (``str``): Name of the experiment.
+    % * *description* (str): Description of the experiment.
+    % * *access_token* (str): Access token for your Whetlab account.
+    % * *parameters* (struct, cell array): Parameters to be tuned during the experiment.
+    % * *outcome* (struct): Description of the outcome to maximize.
+    % * *resume* (boolean): Whether to resume a previously executed experiment. If True, ``parameters`` and ``outcome`` are ignored.
+    % * *force_resume* (boolean): Whether to create a non-existing experiment if resume is true.
     %
     % A Whetlab experiment instance will have the following variables:
     %
-    % * *parameters*(struct): Parameters to be tuned during the experiment.
-    % * *outcome*(struct): Description of the outcome to maximize.
+    % * *parameters* (struct): Parameters to be tuned during the experiment.
+    % * *outcome* (struct): Description of the outcome to maximize.
     %
-    % Example usage
+    % Example usage::
     %
-    %   % Create a new experiment 
+    %   % Create a new experiment
     %   name = 'A descriptive name';
     %   description = 'The description of the experiment';
     %   accessToken = ''; % Assume this is specified in ~/.whetlab
     %   parameters = {struct('name', 'Lambda', 'type','float', 'min', 1e-4, 'max', 0.75, 'size', 1),...
     %                 struct('name', 'Alpha', 'type', 'float', 'min', 1e-4, 'max',1, 'size', 1)};
-    %   outcome.name = 'Accuracy';    
+    %   outcome.name = 'Accuracy';
+    %
     %   scientist = whetlab(name,...
     %               description,...
     %               accessToken,...
@@ -121,10 +122,10 @@ classdef whetlab
             %
             % Important, this cancels the experiment and removes all saved results!
             %
-            % * *access_token*(str): User access token
-            % * *name*(str): Experiment name
+            % * *access_token* (str): User access token
+            % * *name* (str): Experiment name
             % 
-            % Example usage
+            % Example usage::
             %
             %   % Delete the experiment and all corresponding results.
             %   access_token = ''; % Assume this is taken from ~/.whetlab
@@ -309,7 +310,7 @@ classdef whetlab
         %
         % Synchronize the client's internals with the REST server.
         %
-        % Example usage
+        % Example usage::
         %
         %   % Create a new experiment 
         %   scientist = whetlab(name,...
@@ -449,7 +450,7 @@ classdef whetlab
         % * *returns:* Struct array of parameter values.
         % * *return type:* struct array
         % 
-        % Example usage
+        % Example usage::
         %
         %   % Create a new experiment 
         %   scientist = whetlab(name,...
@@ -488,7 +489,7 @@ classdef whetlab
         % This is a utility function that makes it easy to clean up
         % orphaned experiments.
         %
-        % Example usage
+        % Example usage::
         %
         %   % Resume an experiment 
         %   scientist = whetlab(name,...
@@ -519,7 +520,8 @@ classdef whetlab
         %
         % * *returns:* Values to assign to the parameters in the suggested job.
         % * *return type:* struct
-        % Example usage
+        %
+        % Example usage::
         %
         %   % Create a new experiment 
         %   scientist = whetlab(name,...
@@ -568,11 +570,11 @@ classdef whetlab
         % Return the result ID corresponding to the given _param_values_.
         % If no result matches, return -1.
         %
-        % * *param_values*(struct): Values of parameters.
+        % * *param_values* (struct): Values of parameters.
         % * *returns:* ID of the corresponding result. If not match, -1 is returned.
         % * *return type:* int or -1
         %
-        % Example usage
+        % Example usage::
         %
         %   % Resume an experiment 
         %   scientist = whetlab(name,...
@@ -614,7 +616,7 @@ classdef whetlab
         %
         % Important, this cancels the experiment and removes all saved results!
         %
-        % Example usage
+        % Example usage::
         %
         %   % Create a new experiment 
         %   scientist = whetlab(name,...
@@ -643,13 +645,12 @@ classdef whetlab
         % * *param* outcome_val: Value of the outcome.
         % * *type* outcome_val: type defined for outcome
         % 
-        % Example usage
+        % Example usage::
         % 
-        %   % Assume that a whetlab instance has been instantiated in
-        %   scientist.
+        %   % Assume that a whetlab instance has been instantiated in scientist.
         %   job = scientist.suggest(); % Get a suggestion
-        %   % Run an experiment with the suggested parameters
-        %   and record the result.
+        %
+        %   % Run an experiment with the suggested parameters and record the result.
         %   result = 1.7;  
         %   scientist.update(job, result);
         %
@@ -732,17 +733,17 @@ classdef whetlab
         %% cancel(self,param_values)
         % Cancel a job, by removing it from the jobs recorded so far in the experiment.
         %
-        % * *param_values*(struct): Values of the parameters for the job to cancel.
+        % * *param_values* (struct): Values of the parameters for the job to cancel.
         %
-        % Example usage
+        % Example usage::
         % 
-        %   % Assume that a whetlab instance has been instantiated in
-        %   scientist.
+        %   % Assume that a whetlab instance has been instantiated in scientist.
         %   job = scientist.suggest(); % Get a suggestion
-        %   % Run an experiment with the suggested parameters
-        %   and record the result.
+        %
+        %   % Run an experiment with the suggested parameters and record the result.
         %   result = 1.7;  
         %   scientist.update(job, result);
+        %
         %   % Tell Whetlab to forget about that experiment (perhaps the result was an error).
         %   scientist.cancel(job);
         
@@ -776,7 +777,7 @@ classdef whetlab
         % * *returns:* Parameter values corresponding to the best outcome.
         % * *return type:* struct
         %
-        % Example usage
+        % Example usage::
         %
         %   % Resume an experiment 
         %   scientist = whetlab(name,...
@@ -814,7 +815,7 @@ classdef whetlab
         %% report(self)
         % Plot a visual report of the progress made so far in the experiment.
         %
-        % Example usage
+        % Example usage::
         %
         %   % Resume an experiment 
         %   scientist = whetlab(name,...
