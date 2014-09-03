@@ -167,6 +167,7 @@ classdef http_client
                 url = [self.base '/' self.options.api_version '/' path];
                 url = regexprep(url,'(/+)','/');
                 url = regexprep(url,'(http:/+)','http://'); % Hack to fix http
+                url = regexprep(url,'(https:/+)','https://'); % Hack to fix https
 
                 f = fieldnames(headers);
                 for i = 1:numel(f)

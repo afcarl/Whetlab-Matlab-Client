@@ -182,7 +182,7 @@ classdef whetlab
         if isfield(vars, 'api_url')
             hostname = vars.api_url;
         else
-            hostname = 'https://whetlab.com/';
+            hostname = 'https://www.whetlab.com/';
         end
         options = struct('user_agent', 'whetlab_matlab_client',...
             'api_version','api', 'base', hostname);
