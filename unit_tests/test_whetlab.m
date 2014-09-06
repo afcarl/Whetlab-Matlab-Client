@@ -306,7 +306,44 @@ classdef test_whetlab < matlab.unittest.TestCase
 
 		    job = scientist.suggest();
 		    scientist.update(job, 12);
-		end
+        end
+        
+%% Try to create an already existing experiment with result set to false. 
+		function testRandomEnumParameters(testCase)
+			N = 50;
+			nletters = randi([0, 62], N);			
+			vals = randn(N,2);
+			mins = min(vals,2);
+			maxes = max(vals,2);
+			alpha = ['a':'z' 'A':'Z'];
+			alphanumeric = ['a':'z' 'A':'Z' '0':'9' '_'];
+			alphanumeric_punct = ['a':'z' 'A':'Z' '0':'9' '_!.#$%^&*()'];
+
+			for i = 1:50
+				name = [alpha(randi([1, length(alpha)])), ...
+				   alphanumeric(randi([1, length(alphanumeric)], nletters(i), 1))];
+                optone = [alpha(randi([1, length(alpha)])), ...
+				   alphanumeric(randi([1, length(alphanumeric)], nletters(i), 1))];
+                opttwo = [alpha(randi([1, length(alpha)])), ...
+				   alphanumeric(randi([1, length(alphanumeric)], nletters(i), 1))];
+
+				parameters(i) = struct('name', name, 'type','enum',...
+		          'options',{{optone, opttwo}}, 'size',1, 'isOutput',false);
+			end
+		    outcome.name = 'Majesty';
+
+			% Create a new experiment
+			% Description can be any valid ASCII character
+			desc = alphanumeric_punct(randi([1, length(alphanumeric_punct)], nletters(i), 1));
+			scientist = whetlab(testCase.default_expt_name,...
+                    desc,...
+                    testCase.default_access_token,...
+                    parameters,...
+                    outcome, true);
+
+		    job = scientist.suggest();
+		    scientist.update(job, 12);
+		end        
 	end
 
 	methods(TestMethodSetup)
