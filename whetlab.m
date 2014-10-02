@@ -95,12 +95,15 @@ classdef whetlab
     methods(Static)
         function vars = read_dot_file()
             vars = struct();
-            if exist('~/.whetlab', 'file') > 0
+            if exist('~/.whetlab', 'file') > 0                
                 fid = fopen('~/.whetlab');
-                C = textscan(fid, '%s=%s', 'CommentStyle', '[');
-                fclose(fid);
-                for i = 1:length(C{1})
-                    vars.(C{1}{i}) = C{2}{i};
+                tline = fgetl(fid);
+                while ischar(tline)
+                    if ~isempty(strfind(tline,'=')) && ~strcmp(tline(1), '#') && ~strcmp(tline(1), '%')
+                        C = strsplit(tline, '=');
+                        vars.(strtrim(C{1})) = strtrim(C{2});
+                    end
+                    tline = fgetl(fid);
                 end
             end
         end
