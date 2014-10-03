@@ -15,7 +15,7 @@ methods
         % '/alpha/experiments/:id/' GET
         %
         function response = get(self, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'query')
@@ -33,7 +33,7 @@ methods
         % '/alpha/experiments/:id/' DELETE
         %
         function response = delete(self, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'body')

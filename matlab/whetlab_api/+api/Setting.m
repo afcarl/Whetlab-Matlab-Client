@@ -22,7 +22,7 @@ methods
         % scale - The scale of the units associated with this variable
         % isOutput - Is this variable an output of the experiment
         function response = set(self, name, type, min, max, size, units, experiment, scale, isOutput, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'body')

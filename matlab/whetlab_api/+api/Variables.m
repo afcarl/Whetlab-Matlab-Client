@@ -13,7 +13,7 @@ methods
         % '/alpha/variables' GET
         %
         function response = get(self, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'query')

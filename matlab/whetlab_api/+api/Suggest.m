@@ -15,7 +15,7 @@ methods
         % '/alpha/tasks/:taskid/suggest/' POST
         %
         function response = go(self, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'body')

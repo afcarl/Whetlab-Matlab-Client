@@ -15,7 +15,7 @@ methods
         % '/alpha/results/:id/' GET
         %
         function response = get(self, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'query')
@@ -33,7 +33,7 @@ methods
         % '/alpha/results/:id/' DELETE
         %
         function response = delete(self, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'body')
@@ -57,7 +57,7 @@ methods
         % runDate - <no value>
         % id - <no value>
         function response = update(self, variables, experiment, userProposed, description, runDate, id, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'body')
@@ -87,7 +87,7 @@ methods
         % runDate - <no value>
         % id - <no value>
         function response = replace(self, variables, experiment, userProposed, description, runDate, id, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'body')

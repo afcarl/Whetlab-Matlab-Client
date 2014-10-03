@@ -13,7 +13,7 @@ methods
         % '/alpha/experiments/' GET
         %
         function response = get(self, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'query')
@@ -34,7 +34,7 @@ methods
         % description - A detailed description of the experiment
         % user - The user id of this user
         function response = create(self, name, description, settings, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'body')

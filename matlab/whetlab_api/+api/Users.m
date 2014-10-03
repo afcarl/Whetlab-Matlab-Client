@@ -13,7 +13,7 @@ methods
         % '/users' GET
         %
         function response = getusers(self, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'query')

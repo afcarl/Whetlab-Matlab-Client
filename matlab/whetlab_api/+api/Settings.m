@@ -14,7 +14,7 @@ methods
         %
         % experiment - Experiment id to filter by.
         function response = get(self, experiment, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'query')

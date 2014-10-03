@@ -13,7 +13,7 @@ methods
         % '/alpha/results' GET
         %
         function response = get(self, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'query')
@@ -36,7 +36,7 @@ methods
         % description - description
         % runDate - <no value>
         function response = add(self, variables, experiment, userProposed, description, runDate, options)
-                if ~exist('options')
+                if ~exist('options','var')
                     options = struct;
                 end
                 if isfield(options, 'body')
