@@ -6,7 +6,7 @@ parameters{1} = struct('name', 'X', 'type','float',...
     'min',0,'max',15,'size',1);
 parameters{2} = struct('name', 'Y', 'type','float',...
     'min',-5,'max',10,'size',1);     
-parameters{3} = struct('name', 'Z', 'type','enum', 'size', 1, 'options', {{'Monkey 1' 'O1k' 'B1ad'}});
+parameters{3} = struct('name', 'Z', 'type','enum', 'size', 1, 'options', {{'Monkey1' 'O1k' 'B1ad'}});
 
 outcome.name = 'negative braninhoo output';
            
@@ -18,13 +18,12 @@ outcome.name = 'Negative Categorical Braninhoo output';
 % Create a new experiment
 scientist = whetlab(name,...
                     description,...
-                    accessToken,...
                     parameters,...
-                    outcome, true);
+                    outcome, true, accessToken);
 
 for i = 1:100
     % Get suggested new experiment
-    job = scientist.suggest();
+    job = scientist.suggest()
 
     % Perform experiment
     % Braninhoo function

@@ -5,9 +5,7 @@
 addpath(genpath('.'));
 
 % Fill in with your whetlab access token.
-%accessToken = '6d70e340-a677-4e7e-af87-f1229a9a1f1e'; % john
-%accessToken = 'ec0e3e69-cd1a-4479-aa8d-aa3c7f670117';  % rpa
-accessToken = 'LHf5OkiqJjz89bZeEEmepfg1tZVT6W'; % local john
+accessToken = ''; % local john
 
 load ovarian_dataset;
 order = randperm(size(ovarianInputs,2)); % Grab a subset of data to make the problem harder.
@@ -59,9 +57,8 @@ outcome.name = 'Test Accuracy';
 expt_name = 'Parallel E-Net Logistic Regression II';
 scientist = whetlab(expt_name,...
                     'Optimizing the hyper-parameters of an elastic net in matlab',...
-                    accessToken, ...
                     parameters, ...
-                    outcome);
+                    outcome, accessToken);
 
 % Get suggested new experiment
 num_par = 5;

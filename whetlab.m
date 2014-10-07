@@ -1,5 +1,5 @@
 classdef whetlab
-    %% whetlab(name, description, access_token, parameters, outcome, resume)
+    %% whetlab(name, description, parameters, outcome, resume, access_token)
     %
     % Instantiate a Whetlab client.
     % This client allows you to manipulate experiments in Whetlab
@@ -33,11 +33,10 @@ classdef whetlab
     %
     % * *name* (``str``): Name of the experiment.
     % * *description* (str): Description of the experiment.
-    % * *access_token* (str): Access token for your Whetlab account.
     % * *parameters* (struct, cell array): Parameters to be tuned during the experiment.
     % * *outcome* (struct): Description of the outcome to maximize.
     % * *resume* (boolean): Whether to resume a previously executed experiment. If True, ``parameters`` and ``outcome`` are ignored.
-    % * *force_resume* (boolean): Whether to create a non-existing experiment if resume is true.
+    % * *access_token* (str): Access token for your Whetlab account.
     %
     % A Whetlab experiment instance will have the following variables:
     %
@@ -49,16 +48,15 @@ classdef whetlab
     %   % Create a new experiment
     %   name = 'A descriptive name';
     %   description = 'The description of the experiment';
-    %   accessToken = ''; % Assume this is specified in ~/.whetlab
     %   parameters = {struct('name', 'Lambda', 'type','float', 'min', 1e-4, 'max', 0.75, 'size', 1),...
     %                 struct('name', 'Alpha', 'type', 'float', 'min', 1e-4, 'max',1, 'size', 1)};
     %   outcome.name = 'Accuracy';
+    %   accessToken = ''; % Assume this is specified in ~/.whetlab
     %
     %   scientist = whetlab(name,...
     %               description,...
-    %               accessToken,...
     %               parameters,...
-    %               outcome, true);
+    %               outcome, true, access_token);
     
     properties(Access=protected)
         client;
@@ -118,25 +116,25 @@ classdef whetlab
             end
         end
 
-        function delete_experiment(access_token, name)
-            %% delete_experiment(access_token, name)
+        function delete_experiment(name, access_token)
+            %% delete_experiment(name, access_token)
             %
             % Delete the experiment with the given name.  
             %
             % Important, this cancels the experiment and removes all saved results!
             %
-            % * *access_token* (str): User access token
             % * *name* (str): Experiment name
-            % 
+            % * *access_token* (str): User access token
+            %
             % Example usage::
             %
             %   % Delete the experiment and all corresponding results.
             %   access_token = ''; % Assume this is taken from ~/.whetlab
-            %   whetlab.delete_experiment(access_token, 'My Experiment');
+            %   whetlab.delete_experiment('My Experiment',access_token);
         
             % First make sure the experiment with name exists
             outcome.name = '';
-            scientist = whetlab(name, '', access_token, [], outcome, true, false);
+            scientist = whetlab(name, '', [], outcome, true, access_token);
             scientist.delete();
         end
     end
@@ -146,19 +144,14 @@ classdef whetlab
     function self = whetlab(...
              name,...
              description,...
-             access_token,...
              parameters,...
              outcome,...
              resume,...
-             force_resume)
+             access_token)
 
         assert(usejava('jvm'),'This code requires Java');
-        if (nargin == 6)
+        if (nargin == 5)
             resume = true;
-        end
-        % Force the client to create the experiment if resume is true and it doesn't exist
-        if (nargin < 7)
-            force_resume = true;
         end
 
         experiment_id = -1;
@@ -206,7 +199,7 @@ classdef whetlab
                 disp(['Resuming experiment: ' self.experiment]);
                 return % Successfully resumed
             catch err
-                if ~force_resume || ~strcmp(err.identifier, 'Whetlab:ExperimentNotFoundError')
+                if ~strcmp(err.identifier, 'Whetlab:ExperimentNotFoundError')
                     rethrow(err);
                 end
             end
@@ -239,11 +232,11 @@ classdef whetlab
                 error('Whetlab:UnnamedParameterError', 'You must specify a name for each parameter.')
             end
 
-            % Check if all properties are supported
-            % if strcmp(param.('type'), 'enum')
-            %     error('Whetlab:ValueError', 'Enum types are not supported yet.  Please use integers instead.');
-            % end
             if ~isfield(param,'type'), param.('type') = self.default_values.type; end
+
+            if strcmp(param.type, 'int')
+                param.('type') = 'integer';
+            end
 
             if strcmp(param.type, 'enum')
                 if ~isfield(param, 'options')  || numel(param.options) < 2
@@ -294,18 +287,25 @@ classdef whetlab
         try
             res = self.client.experiments().create(name, description, settings, struct());
         catch err
-            if (resume && ...
-                strcmp(err.identifier, 'MATLAB:HttpConection:ConnectionError') && ...
-                ~isempty(strfind(err.message, 'Experiment with this User and Name already exists')))
+            % Resume, unless got a ConnectionError
+            if resume && ...
+                ~strcmp(err.identifier, 'MATLAB:HttpConection:ConnectionError')
+                % This experiment was just already created - race condition.
                 self = self.sync_with_server();
                 return
             else
-                % This experiment was just already created - race condition.
                 rethrow(err);
             end
         end
+
         experiment_id = res.body.('id');
         self.experiment_id = experiment_id;
+
+        % Check if there are pending experiments
+        p = self.pending();
+        if length(p) > 0
+            disp(sprintf('INFO: this experiment currently has %d jobs (results) that are pending.',length(p)));
+        end
     end % Experiment()
 
     function self = sync_with_server(self)
@@ -318,9 +318,8 @@ classdef whetlab
         %   % Create a new experiment 
         %   scientist = whetlab(name,...
         %               description,...
-        %               accessToken,...
         %               parameters,...
-        %               outcome, true);
+        %               outcome, true, access_token);
         %
         %   scientist.sync_with_server()
 
@@ -392,8 +391,9 @@ classdef whetlab
                     self.parameters{end+1} = struct('name', name, 'type', vartype,'min',minval,'max',maxval,...
                                  'size', varsize,'isOutput', false, 'units', units,'scale', scale);
                 elseif strcmp(vartype, 'enum')
+                options = param.('options');
                     self.parameters{end+1} = struct('name', name, 'type', vartype,'min',minval,'max',maxval,...
-                                 'size', varsize,'isOutput', false, 'units', units,'scale', scale);
+                                 'size', varsize,'isOutput', false, 'units', units,'scale', scale,'options',options);
                 else
                     error('Whetlab:ValueError', ['Type ' vartype ' not supported for variable ' name]);
                 end                    
@@ -427,7 +427,7 @@ classdef whetlab
                     % Don't record the outcome if the experiment is pending
                     if ~isempty(v.value)
                         self.ids_to_outcome_values.put(res_id, v.value);
-                    else % Treat NaN as the special indicator that the experiment is pending. We use -INF for constrant violations
+                    else % Treat NaN as the special indicator that the experiment is pending. We use -INF for constraint violations
                         self.ids_to_outcome_values.put(res_id, nan);
                     end
                 else
@@ -455,18 +455,17 @@ classdef whetlab
         % 
         % Example usage::
         %
-        %   % Create a new experiment 
+        %   % Create a new experiment
         %   scientist = whetlab(name,...
         %               description,...
-        %               accessToken,...
         %               parameters,...
-        %               outcome, true);
+        %               outcome, true, access_token);
         %
         %   % Get the list of pending experiments
         %   pend = scientist.pending()
     
         % Sync with the REST server     
-        self.sync_with_server()
+        self.sync_with_server();
 
         % Find IDs of results with value None and append parameters to returned list
         i = 1;
@@ -494,19 +493,20 @@ classdef whetlab
         %
         % Example usage::
         %
-        %   % Resume an experiment 
+        %   % Create a new experiment
         %   scientist = whetlab(name,...
         %               description,...
-        %               accessToken,...
         %               parameters,...
-        %               outcome, true);
+        %               outcome, true, access_token);
         %
         %   % Clear all of orphaned pending experiments
         %   scientist.clear_pending()
         
         jobs = self.pending();
         if ~isempty(jobs)
-            self.cancel(jobs);
+            for i = 1:numel(jobs)
+                self.cancel(jobs(i));
+            end
         end
         self = self.sync_with_server();
     end        
@@ -526,12 +526,11 @@ classdef whetlab
         %
         % Example usage::
         %
-        %   % Create a new experiment 
+        %   % Create a new experiment
         %   scientist = whetlab(name,...
         %               description,...
-        %               accessToken,...
         %               parameters,...
-        %               outcome, true);
+        %               outcome, true, access_token);
         %
         %   % Get a new experiment to run.
         %   job = scientist.suggest();
@@ -566,6 +565,7 @@ classdef whetlab
 
         % Keep track of id / param_values relationship
         self.ids_to_param_values.put(result_id, savejson('',next));
+        next.('result_id_') = result_id;
     end % suggest
 
     function id = get_id(self, param_values)
@@ -579,12 +579,11 @@ classdef whetlab
         %
         % Example usage::
         %
-        %   % Resume an experiment 
+        %   % Create a new experiment
         %   scientist = whetlab(name,...
         %               description,...
-        %               accessToken,...
         %               parameters,...
-        %               outcome, true);
+        %               outcome, true, access_token);
         %
         %   % Get a new experiment to run
         %   job = scientist.suggest();
@@ -601,6 +600,11 @@ classdef whetlab
 
         % First sync with the server
         self = self.sync_with_server();
+
+        % Remove key result_id_ if present
+        if isfield(param_values,'result_id_')
+            param_values = rmfield(param_values,'result_id_');
+        end
 
         id = -1;
         keys = self.ids_to_param_values.keySet().toArray;
@@ -621,12 +625,11 @@ classdef whetlab
         %
         % Example usage::
         %
-        %   % Create a new experiment 
+        %   % Create a new experiment
         %   scientist = whetlab(name,...
         %               description,...
-        %               accessToken,...
         %               parameters,...
-        %               outcome, true);
+        %               outcome, true, access_token);
         %
         %   % Delete this experiment and all corresponding results.
         %   scientist.delete()
@@ -661,8 +664,13 @@ classdef whetlab
             error('Whetlab:ValueError', 'Update does not accept more than one result at a time');
         end
 
-        % Check whether this param_values has a result ID
-        result_id = self.get_id(param_values);
+
+        if isfield(param_values,'result_id_')
+            result_id = param_values.('result_id_');
+        else
+            % Check whether this param_values has a result ID
+            result_id = self.get_id(param_values);
+        end
 
         if result_id == -1
             % - Add new results with param_values and outcome_val
@@ -751,25 +759,22 @@ classdef whetlab
         %   scientist.cancel(job);
         
         % Check whether this param_values has a results ID
-        for i = 1:numel(param_values)
-            id = self.get_id(param_values(i));
-            
-            if id > 0
-                self.ids_to_param_values.remove(num2str(id));
+        id = self.get_id(param_values);
+        if id > 0
+            self.ids_to_param_values.remove(num2str(id));
 
-                % Delete from internals
-                if self.ids_to_outcome_values.containsKey(id)
-                    self.ids_to_outcome_values.remove(id);
-                end
-                
-                % Remove this job from the pending list if it's there.
-                self.pending_ids(self.pending_ids == id) = [];
-
-                % Delete from server
-                res = self.client.result(num2str(id)).delete(struct());
-            else
-                warning('Did not find experiment with the provided parameters');
+            % Delete from internals
+            if self.ids_to_outcome_values.containsKey(id)
+                self.ids_to_outcome_values.remove(id);
             end
+                
+            % Remove this job from the pending list if it's there.
+            self.pending_ids(self.pending_ids == id) = [];
+
+            % Delete from server
+            res = self.client.result(num2str(id)).delete(struct());
+        else
+            warning('Did not find experiment with the provided parameters');
         end
     end % cancel
     
@@ -782,12 +787,11 @@ classdef whetlab
         %
         % Example usage::
         %
-        %   % Resume an experiment 
+        %   % Create a new experiment
         %   scientist = whetlab(name,...
         %               description,...
-        %               accessToken,...
         %               parameters,...
-        %               outcome, true);
+        %               outcome, true, access_token);
         %
         %   % Get the best job seen so far.
         %   best = scientist.best();
@@ -820,12 +824,11 @@ classdef whetlab
         %
         % Example usage::
         %
-        %   % Resume an experiment 
+        %   % Create a new experiment
         %   scientist = whetlab(name,...
         %               description,...
-        %               accessToken,...
         %               parameters,...
-        %               outcome, true);
+        %               outcome, true, access_token);
         %
         %   % Visualize the results so far.
         %   scientist.report();
