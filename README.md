@@ -21,22 +21,22 @@ Installation Instructions
 =========================
 
 Installation is really simple.  Simply clone this repository and the path
-to your local copy to MATLAB's search path. 
+to your local copy to Matlab's search path. 
 
 On UNIX or Mac platforms, this can be done by adding the following
-line to the file ``$home/Documents/MATLAB/startup.m`` (if you don't already
-have this file, simply create it): ::
+line to the file ``$HOME/Documents/MATLAB/startup.m`` (if you don't already
+have this file, simply create it):
 
     addpath(genpath('MY_LOCAL_COPY/Whetlab-Matlab-Client'))
 
-where MY_LOCAL_COPY is the location of the cloned repository.
+where ``MY_LOCAL_COPY`` is the parent directory of the cloned ``Whetlab-Matlab-Client`` repository.
 
 Getting Started
 ===============
 
 We have written up a [tutorial](https://www.whetlab.com/docs/matlab-tutorial/) to get
-you up and running quickly with whetlab.  If you're feeling really
+you up and running quickly with Whetlab.  If you're feeling really
 impatient there are also a number of example scripts in this directory
-to demonstrate the usage of the MATLAB client.  Just log in to
+to demonstrate the usage of the Matlab client.  Just log in to
 [Whetlab](https://www.whetlab.com), navigate to the Account page and
 grab your api token to get started.
