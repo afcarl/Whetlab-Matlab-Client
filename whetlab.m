@@ -147,22 +147,27 @@ classdef whetlab
              parameters,...
              outcome,...
              resume,...
-             access_token)
+             access_token,...
+             retries)
 
         assert(usejava('jvm'),'This code requires Java');
-        if (nargin == 5)
+        if (nargin <= 4)
             resume = true;
         end
-
         experiment_id = -1;
 
         vars = whetlab.read_dot_file();
-        if isempty(access_token)
+
+        if (nargin <= 5 | isempty(access_token))
             try
                 access_token = vars.access_token;
             catch
                 error('You must specify your access token in the variable access_token either in the client or in your ~/.whetlab file')
             end
+        end
+
+        if nargin <= 6
+            retries = true;
         end
 
         % Make a few obvious asserts
@@ -180,10 +185,7 @@ classdef whetlab
         else
             hostname = 'https://www.whetlab.com/';
         end
-        options = struct('user_agent', 'whetlab_matlab_client',...
-            'api_version','api', 'base', hostname);
-        options.headers.('Authorization') = ['Bearer ' access_token];
-        self.client = whetlab_api_client('', options);
+        self.client = SimpleREST(access_token, hostname, retries);
 
         % For now, we support one task per experiment, and the name and description of the task
         % is the same as the experiment's
@@ -285,7 +287,7 @@ classdef whetlab
         outcome.name = self.outcome_name;
         settings{end+1} = outcome;    
         try
-            res = self.client.experiments().create(name, description, settings, struct());
+            experiment_id = self.client.create(name, description, settings);
         catch err
             % Resume, unless got a ConnectionError
             if resume && ...
@@ -298,7 +300,6 @@ classdef whetlab
             end
         end
 
-        experiment_id = res.body.('id');
         self.experiment_id = experiment_id;
 
         % Check if there are pending experiments
@@ -331,43 +332,20 @@ classdef whetlab
         found = false;
 
         if self.experiment_id < 0
-            % Look for experiment and get the ID... search one page at a time
-            page = 1;
-            more_pages = true;
-            while more_pages
-                rest_exps = self.client.experiments().get(struct('query',struct('page',page))).body;
-            
-                % Check if more pages to come
-                more_pages = ~isempty(rest_exps.('next'));
-                page = page + 1;
-
-                % Find in current page whether we find the experiment we are looking for
-                rest_exps = rest_exps.results;                
-                for i = 1:numel(rest_exps)
-                    expt = rest_exps{i};
-                    if (strcmp(expt.('name'),self.experiment) == 1)
-                        self.experiment_id = expt.id;
-                        found = true;
-                        break;
-                    end
-                end
-                if found
-                    break;
-                end
-            end
-            if ~found
+            self.experiment_id = self.client.find_experiment(self.experiment);
+            if self.experiment_id < 0
                 error('Whetlab:ExperimentNotFoundError',...
                     'Experiment with name \"%s\" and description \"%s\" not found.',...
                      self.experiment, self.experiment_description);
             end
         else
-            res = self.client.experiments().get(struct('query',struct('id',self.experiment_id))).body.('results');
-            self.experiment = res{1}.('name');
-            self.experiment_description = res{1}.('description');
+            details = self.client.get_experiment_details(self.experiment_id);
+            self.experiment = details.('name');
+            self.experiment_description = details.('description');
         end
 
         % Get settings for this task, to get the parameter and outcome names
-        rest_parameters = self.client.settings().get(num2str(self.experiment_id), struct('query', struct('page_size', self.INF_PAGE_SIZE))).body.('results');
+        rest_parameters = self.client.get_parameters(self.experiment_id);
         self.parameters = {};
         for i = 1:numel(rest_parameters)
             param = rest_parameters{i};
@@ -401,7 +379,7 @@ classdef whetlab
         end
 
         % Get results generated so far for this task
-        rest_results = self.client.results().get(struct('query',struct('experiment',self.experiment_id,'page_size', self.INF_PAGE_SIZE))).body.('results');
+        rest_results = self.client.get_results(self.experiment_id);
         % Construct things needed by client internally, to keep track of
         % all the results
 
@@ -465,7 +443,7 @@ classdef whetlab
         %   pend = scientist.pending()
     
         % Sync with the REST server     
-        self.sync_with_server();
+        self = self.sync_with_server();
 
         % Find IDs of results with value None and append parameters to returned list
         i = 1;
@@ -536,9 +514,7 @@ classdef whetlab
         %   job = scientist.suggest();
         
         self.sync_with_server();
-        res = self.client.suggest(num2str(self.experiment_id)).go(struct());
-        res = res.body;
-        result_id = res.('id');
+        result_id = self.client.get_suggestion(self.experiment_id);
         
         % Remember that this job is now assumed to be pending
         self.pending_ids(end+1) = result_id;
@@ -546,11 +522,12 @@ classdef whetlab
         % Poll the server for the actual variable values in the suggestion.  
         % Once the Bayesian optimization proposes an
         % experiment, the server will fill these in.
-        variables = res.variables;
+        result = self.client.get_result(result_id);
+        variables = result.variables;
         while isempty(variables)
             pause(2);
-            result = self.client.result(num2str(result_id)).get(struct());
-            variables = result.body.variables;
+            result = self.client.get_result(result_id);
+            variables = result.variables;
         end
         
         % Put in a nicer format
@@ -634,8 +611,7 @@ classdef whetlab
         %   % Delete this experiment and all corresponding results.
         %   scientist.delete()
         
-        res = self.client.experiment(num2str(self.experiment_id)).delete();
-        disp('Experiment has been deleted');
+        self.client.delete_experiment(self.experiment_id);
     end
     
     function self = update(self, param_values, outcome_val)
@@ -700,9 +676,7 @@ classdef whetlab
                     'name',name, 'value',value);                
             end
             result.variables = variables;
-            result = self.client.results().add(variables, self.experiment_id, true, '', '', struct());
-            result = result.body;
-            result_id = result.id;
+            result_id = self.client.add_result(variables, self.experiment_id);
 
             % if isstruct(param_values)
             %     param_values = whetlab.struct_2_cell_params(param_values)
@@ -710,7 +684,7 @@ classdef whetlab
 
             self.ids_to_param_values.put(result_id, savejson('',param_values));
         else
-            result = self.client.result(num2str(result_id)).get(struct()).body();
+            result = self.client.get_result(result_id);
 
             for i = 1:numel(result.variables)
                 var = result.variables{i};
@@ -730,9 +704,7 @@ classdef whetlab
             end
 
             self.param_values.put(result_id, savejson('',result));
-            res = self.client.result(num2str(result_id)).replace(...
-                result.variables, result.experiment, result.userProposed,...
-                result.description, result.createdDate, result.id, struct());
+            self.client.update_result(result_id, result);
 
             % Remove this job from the pending list
             self.pending_ids(self.pending_ids == result_id) = [];
@@ -772,7 +744,7 @@ classdef whetlab
             self.pending_ids(self.pending_ids == id) = [];
 
             % Delete from server
-            res = self.client.result(num2str(id)).delete(struct());
+            self.client.delete_result(id);
         else
             warning('Did not find experiment with the provided parameters');
         end
@@ -808,7 +780,7 @@ classdef whetlab
         result_id = ids(ind);
 
         % Get param values that generated this outcome
-        result = self.client.result(num2str(result_id)).get(struct()).body;
+        result = self.client.get_result(result_id);
         for i = 1:numel(result.('variables'))
             v = result.('variables'){i};
             if ~strcmp(v.name, self.outcome_name)
@@ -906,3 +878,5 @@ classdef whetlab
     end
     end % methods
 end
+
+
