@@ -1,6 +1,6 @@
 
 % Make sure the Whetlab client is in the path.
-addpath(genpath('.'));
+addpath(genpath('..'));
 
 % Fill in the whetlab access token.
 accessToken = '';
@@ -50,36 +50,15 @@ parameters.('KMeansIters') = struct('name', 'KMeansIters', ...
 
 outcome.name = 'TestAccuracy';
 
-name = 'Simple Broken';
-try
-  scientist = whetlab(name, ...
-                      'Does this work?', ...
-                      parameters, ...
-                      outcome, ...
-                      false,accessToken);
-catch err
-  err.message
-  scientist = whetlab(name, ...
-                      'Does this work?', ...
-                      parameters, ...
-                      outcome, ...
-                      true,accessToken);
-end
-fprintf('Created scientist object.\n');
-
-% Load in the data.
-CIFAR_DIR='/home/rpa/Data/CIFAR-10/cifar-10-batches-mat/';
-fprintf('Loading training data...\n');
-f1=load([CIFAR_DIR '/data_batch_1.mat']);
-f2=load([CIFAR_DIR '/data_batch_2.mat']);
-f3=load([CIFAR_DIR '/data_batch_3.mat']);
-f4=load([CIFAR_DIR '/data_batch_4.mat']);
-f5=load([CIFAR_DIR '/data_batch_5.mat']);
-
-trainX = double([f1.data; f2.data; f3.data; f4.data; f5.data]);
-trainY = double([f1.labels; f2.labels; f3.labels; f4.labels; f5.labels]) ...
-         + 1; % add 1 to labels!
-clear f1 f2 f3 f4 f5;
+name = 'Coates CIFAR-10 Pipeline I';
+scientist = whetlab(name, ...
+                    ['Optimizing CIFAR-10 performance with features ' ...
+                    'from K-means'], ...
+                    accessToken, ...
+                    parameters, ...
+                    outcome, ...
+                    true);
+fprintf('Scientist created.\n');
 
 job = [];
 while isempty(job)
@@ -92,20 +71,35 @@ while isempty(job)
 end
 fprintf('Got suggestion.\n');
 
-acc = rand()*100;
+failed = true;
+try
+  cv_acc = rand()*100;
+  failed = false;
+  cv_acc
+catch err
+  fprintf('Some serious error occurred.\n');
+  err.message
+end
 pause(5);
+fprintf('Experiment complete.\n');
 
 % Now inform scientist about the outcome.
 done = false;
 while ~done
   try
-    scientist.update(job, acc);
+    if failed
+      fprintf('Reporting result as NaN.\n');
+      scientist.update(job, nan);
+    else
+      fprintf('Reporting successful result of %f\n', cv_acc);
+      scientist.update(job, cv_acc);
+    end
     done = true;
+    fprintf('Successful update.\n');
   catch err
+    fprintf('Error in update.  Retrying...\n');
     err.message
-    pause(5);
   end
-  fprintf('Successful update.\n');
 end
 fprintf('Experiment complete.\n');
 
