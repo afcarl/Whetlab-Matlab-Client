@@ -33,7 +33,7 @@ classdef whetlab
     % * *description* (str): Description of the experiment.
     % * *parameters* (struct, cell array): Parameters to be tuned during the experiment.
     % * *outcome* (struct): Description of the outcome to maximize.
-    % * *resume* (boolean): Whether to resume a previously executed experiment. If True and experiment already exists, ``parameters`` and ``outcome`` are ignored (default: ``None``).
+    % * *resume* (boolean): Whether to resume a previously executed experiment. If ``True`` and experiment's name matches an existing experiment, ``parameters`` and ``outcome`` are ignored (default: ``None``).
     % * *access_token* (str): Access token for your Whetlab account. If ``''``, then is read from whetlab configuration file (default: ``''``).
     %
     % A Whetlab experiment instance will have the following variables:
