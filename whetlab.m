@@ -14,18 +14,16 @@ classdef whetlab
     % ``struct`` should contain the appropriate keys to properly describe
     % the parameter:
     %
-    % * **type**: type of the parameter (default: ``float``)
-    % * **min**: minimum value of the parameter
-    % * **max**: maximum value of the parameter
+    % * **type**: type of the parameter, among ``float``, ``int`` and ``enum``(default: ``float``)
+    % * **min**: minimum value of the parameter (only for types ``float`` and ``int``)
+    % * **max**: maximum value of the parameter (only for types ``float`` and ``int``)
+    % * **options**: cell of strings, of the possible values that can take an ``enum`` parameter (only for type ``enum``)
     % * **size**: size of parameter (default: ``1``)
-    % * **units**: units (``str``) in which the parameter is measured
-    % * **scale**: scale to use when exploring parameter values (default: ``linear``)
     %
     % Outcome should also be a _struct_, describing the outcome. It
-    % should have the fields:
+    % should have the field:
     %
     % * *name*: name (``str``) for the outcome being optimized
-    % * *type*: type of the outcome (default: ``float``)
     %
     % Finally, experiments can be resumed from a previous state.
     % To do so, ``name`` must match a previously created experiment
