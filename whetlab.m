@@ -13,7 +13,7 @@ classdef whetlab
     % ``struct`` should contain the appropriate keys to properly describe
     % the parameter:
     %
-    % * **name**: name of the parameter (``str`` )
+    % * **name**: name of the parameter (``str``)
     % * **type**: type of the parameter, among ``float``, ``int`` and ``enum``(default: ``float``)
     % * **min**: minimum value of the parameter (only for types ``float`` and ``int``)
     % * **max**: maximum value of the parameter (only for types ``float`` and ``int``)
