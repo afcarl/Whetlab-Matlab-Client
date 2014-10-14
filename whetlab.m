@@ -8,28 +8,28 @@ classdef whetlab
     % A name and description for the experiment must be specified.
     % A Whetlab access token must also be provided.
     % The parameters to tune in the experiment are specified by
-    % ``parameters``. It should be a ``struct``, where the fields are
-    % the parameters (``str``) and values are ``struct`` that
-    % provide information about these parameters. Each of these
+    % ``parameters``. It should be a cell array, where each cell is
+    % a parameter, in the form of a ``struct`` describing it. Each of these
     % ``struct`` should contain the appropriate keys to properly describe
     % the parameter:
     %
+    % * **name**: name of the parameter (``str`` )
     % * **type**: type of the parameter, among ``float``, ``int`` and ``enum``(default: ``float``)
     % * **min**: minimum value of the parameter (only for types ``float`` and ``int``)
     % * **max**: maximum value of the parameter (only for types ``float`` and ``int``)
     % * **options**: cell of strings, of the possible values that can take an ``enum`` parameter (only for type ``enum``)
     % * **size**: size of parameter (default: ``1``)
     %
-    % Outcome should also be a _struct_, describing the outcome. It
+    % Outcome should also be a ``struct``, describing the outcome. It
     % should have the field:
     %
-    % * *name*: name (``str``) for the outcome being optimized
+    % * *name*: name (str) for the outcome being optimized
     %
     % Finally, experiments can be resumed from a previous state.
     % To do so, ``name`` must match a previously created experiment
     % and argument ``resume`` must be set to ``True`` (default is ``False``).
     %
-    % * *name* (``str``): Name of the experiment.
+    % * *name* (str): Name of the experiment.
     % * *description* (str): Description of the experiment.
     % * *parameters* (struct, cell array): Parameters to be tuned during the experiment.
     % * *outcome* (struct): Description of the outcome to maximize.
