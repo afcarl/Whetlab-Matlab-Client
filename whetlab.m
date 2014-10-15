@@ -91,8 +91,18 @@ classdef whetlab
     methods(Static)
         function vars = read_dot_file()
             vars = struct();
-            if exist('~/.whetlab', 'file') > 0                
-                fid = fopen('~/.whetlab');
+            dot_file_path = '';
+
+            if exist('.whetlab', 'file') > 0 
+                dot_file_path = '.whetlab';
+            end
+
+            if strcmp(dot_file_path,'') && exist('~/.whetlab', 'file') > 0 
+                dot_file_path = '~/.whetlab';
+            end
+
+            if ~strcmp(dot_file_path,'') 
+                fid = fopen(dot_file_path);
                 tline = fgetl(fid);
                 while ischar(tline)
                     if ~isempty(strfind(tline,'=')) && ~strcmp(tline(1), '#') && ~strcmp(tline(1), '%')
@@ -185,8 +195,6 @@ classdef whetlab
         end
         self.client = SimpleREST(access_token, hostname, retries);
 
-        % For now, we support one task per experiment, and the name and description of the task
-        % is the same as the experiment's
         self.experiment_description = description;
         self.experiment = name;
         self.outcome_name = outcome.name;
