@@ -32,10 +32,11 @@ classdef SimpleREST
         %%
 
         % Get the HTTP status code from the error message
+        disp(err.message)
         if (strcmp(err.identifier, 'MATLAB:HttpConection:ConnectionError'))
-            [startIndex,endIndex] = regexp(err.message,'code:\d/');
+            [startIndex,endIndex] = regexp(err.message,'code:\d+/');
             if ~isempty(startIndex)
-                code = str2num(err.message(startIndex+5, endIndex-1))
+                code = str2num(err.message(startIndex+5:endIndex-1));
             else
                 code = 600; % Couldn't connect to server
             end
@@ -46,7 +47,7 @@ classdef SimpleREST
             rethrow(err);
         end
         if code == 503 % 503 indicates maintenance
-            retry_in = round(rand()*60)
+            retry_in = round(rand()*60);
             disp(sprintf('WARNING: Site is temporarily down for maintenance. Will try again in %d seconds.', retry_in));
         else
             n_retries = n_retries + 1;
@@ -56,10 +57,10 @@ classdef SimpleREST
                 retry_in = round(rand()*2*self.RETRY_TIMES(n_retries));
                 if n_retries >= 2;                
                     disp(sprintf('WARNING: experiencing problems communicating with the server. Will try again in %d seconds.', retry_in));
-                end
-                pause(retry_in);
+                end                
             end
         end
+        pause(retry_in);
     end
 
     function experiment_id = create(self, name, description, settings)
