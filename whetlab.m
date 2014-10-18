@@ -8,35 +8,33 @@ classdef whetlab
     % A name and description for the experiment must be specified.
     % A Whetlab access token must also be provided.
     % The parameters to tune in the experiment are specified by
-    % ``parameters``. It should be a ``struct``, where the fields are
-    % the parameters (``str``) and values are ``struct`` that
-    % provide information about these parameters. Each of these
+    % ``parameters``. It should be a cell array, where each cell is
+    % a parameter, in the form of a ``struct`` describing it. Each of these
     % ``struct`` should contain the appropriate keys to properly describe
     % the parameter:
     %
-    % * **type**: type of the parameter (default: ``float``)
-    % * **min**: minimum value of the parameter
-    % * **max**: maximum value of the parameter
+    % * **name**: name of the parameter (``str``)
+    % * **type**: type of the parameter, among ``float``, ``int`` and ``enum``(default: ``float``)
+    % * **min**: minimum value of the parameter (only for types ``float`` and ``int``)
+    % * **max**: maximum value of the parameter (only for types ``float`` and ``int``)
+    % * **options**: cell of strings, of the possible values that can take an ``enum`` parameter (only for type ``enum``)
     % * **size**: size of parameter (default: ``1``)
-    % * **units**: units (``str``) in which the parameter is measured
-    % * **scale**: scale to use when exploring parameter values (default: ``linear``)
     %
-    % Outcome should also be a _struct_, describing the outcome. It
-    % should have the fields:
+    % Outcome should also be a ``struct``, describing the outcome. It
+    % should have the field:
     %
-    % * *name*: name (``str``) for the outcome being optimized
-    % * *type*: type of the outcome (default: ``float``)
+    % * *name*: name (str) for the outcome being optimized
     %
     % Finally, experiments can be resumed from a previous state.
     % To do so, ``name`` must match a previously created experiment
     % and argument ``resume`` must be set to ``True`` (default is ``False``).
     %
-    % * *name* (``str``): Name of the experiment.
+    % * *name* (str): Name of the experiment.
     % * *description* (str): Description of the experiment.
     % * *parameters* (struct, cell array): Parameters to be tuned during the experiment.
     % * *outcome* (struct): Description of the outcome to maximize.
-    % * *resume* (boolean): Whether to resume a previously executed experiment. If True, ``parameters`` and ``outcome`` are ignored.
-    % * *access_token* (str): Access token for your Whetlab account.
+    % * *resume* (boolean): Whether to resume a previously executed experiment. If ``True`` and experiment's name matches an existing experiment, ``parameters`` and ``outcome`` are ignored (default: ``None``).
+    % * *access_token* (str): Access token for your Whetlab account. If ``''``, then is read from whetlab configuration file (default: ``''``).
     %
     % A Whetlab experiment instance will have the following variables:
     %
@@ -93,8 +91,18 @@ classdef whetlab
     methods(Static)
         function vars = read_dot_file()
             vars = struct();
-            if exist('~/.whetlab', 'file') > 0                
-                fid = fopen('~/.whetlab');
+            dot_file_path = '';
+
+            if exist('.whetlab', 'file') > 0 
+                dot_file_path = '.whetlab';
+            end
+
+            if strcmp(dot_file_path,'') && exist('~/.whetlab', 'file') > 0 
+                dot_file_path = '~/.whetlab';
+            end
+
+            if ~strcmp(dot_file_path,'') 
+                fid = fopen(dot_file_path);
                 tline = fgetl(fid);
                 while ischar(tline)
                     if ~isempty(strfind(tline,'=')) && ~strcmp(tline(1), '#') && ~strcmp(tline(1), '%')
@@ -187,8 +195,6 @@ classdef whetlab
         end
         self.client = SimpleREST(access_token, hostname, retries);
 
-        % For now, we support one task per experiment, and the name and description of the task
-        % is the same as the experiment's
         self.experiment_description = description;
         self.experiment = name;
         self.outcome_name = outcome.name;
