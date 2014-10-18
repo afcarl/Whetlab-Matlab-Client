@@ -10,7 +10,7 @@ classdef SimpleREST
         client;
         INF_PAGE_SIZE = 1000000;
         RETRY_ERROR_MESSAGES = {'Could not connect to server.'};
-        RETRY_TIMES = [5,30,60,150,300];
+        RETRY_TIMES = [5,30,60,150,300,600];
     end
 
 
@@ -31,25 +31,34 @@ classdef SimpleREST
         % Checks whether ``err`` is an error for which we do retries.
         %%
 
+        % Get the HTTP status code from the error message
+        if (strcmp(err.identifier, 'MATLAB:HttpConection:ConnectionError'))
+            [startIndex,endIndex] = regexp(err.message,'code:\d/');
+            if ~isempty(startIndex)
+                code = str2num(err.message(startIndex+5, endIndex-1))
+            else
+                code = 600; % Couldn't connect to server
+            end
+        end
+
         retry = false;
-        for i = 1:numel(self.RETRY_ERROR_MESSAGES);
-            if (strcmp(err.identifier, 'MATLAB:HttpConection:ConnectionError') ...
-                & strcmp(err.message, self.RETRY_ERROR_MESSAGES{i}))
-                retry = true;
-                break;
-            end
-        end
-        if ~retry;
+        if code <= 500 % A client or internal server error
             rethrow(err);
         end
-        n_retries = n_retries + 1;
-        if n_retries > numel(self.RETRY_TIMES)
-            rethrow(err);
+        if code == 503 % 503 indicates maintenance
+            retry_in = round(rand()*60)
+            disp(sprintf('WARNING: Site is temporarily down for maintenance. Will try again in %d seconds.', retry_in));
         else
-            if n_retries >= 4;
-                disp(sprintf('WARNING: experiencing problems communicating with the server. Will try again in %d seconds.',self.RETRY_TIMES(n_retries)));
+            n_retries = n_retries + 1;
+            if n_retries > numel(self.RETRY_TIMES)
+                rethrow(err);
+            else
+                retry_in = round(rand()*2*self.RETRY_TIMES(n_retries));
+                if n_retries >= 2;                
+                    disp(sprintf('WARNING: experiencing problems communicating with the server. Will try again in %d seconds.', retry_in));
+                end
+                pause(retry_in);
             end
-            pause(self.RETRY_TIMES(n_retries));
         end
     end
 

@@ -196,7 +196,7 @@ classdef http_client
                      s = lasterror();
                      if strfind(s.message, 'java.net')
                          error('MATLAB:HttpConection:ConnectionError',...
-                             'Could not connect to server.');                         
+                             'Could not connect to server.');
                      else
                          rethrow(s);
                      end
@@ -205,7 +205,7 @@ classdef http_client
                 % Http request fails for whatever reason
                 if extras.isGood <= 0
                     msg = sprintf(['Http connection to %s failed ' ...
-                                   'with status %s/%s. '], extras.url, ...
+                                   'with status code:%s/%s. '], extras.url, ...
                                   num2str(extras.status.value), ...
                                   extras.status.msg);
                     % Tack on the message from the server
