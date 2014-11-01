@@ -42,13 +42,11 @@ classdef SimpleREST
         end
 
         retry = false;
-        if code <= 500 % A client or internal server error
-            rethrow(err);
-        end
         if code == 503 % 503 indicates maintenance
             retry_in = round(rand()*60);
             disp(sprintf('WARNING: Site is temporarily down for maintenance. Will try again in %d seconds.', retry_in));
-        else
+
+        elseif code > 500 
             n_retries = n_retries + 1;
             if n_retries > numel(self.RETRY_TIMES)
                 rethrow(err);
@@ -58,6 +56,19 @@ classdef SimpleREST
                     disp(sprintf('WARNING: experiencing problems communicating with the server. Will try again in %d seconds.', retry_in));
                 end                
             end
+
+        % Rate limiting
+        elseif code == 429
+            n_retries = n_retries + 1;
+            if n_retries > numel(self.RETRY_TIMES)
+                rethrow(err);
+            else
+                retry_in = round(rand()*2*self.RETRY_TIMES(n_retries));
+                disp(sprintf('WARNING: Rate limited by the server: %s Will try again in %d seconds.', err.message, retry_in));
+            end
+
+        else
+            rethrow(err);
         end
         pause(retry_in);
     end
