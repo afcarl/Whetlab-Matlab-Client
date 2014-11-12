@@ -111,6 +111,7 @@ classdef whetlab
                     end
                     tline = fgetl(fid);
                 end
+                fclose(fid);
             end
         end
 
@@ -124,6 +125,36 @@ classdef whetlab
             end
         end
 
+        function equal = struct_almost_equal(a, b)
+            equal = true;
+            if ~isstruct(a) or ~isstruct(b)
+                equal = false;
+                return
+            end
+
+            fa = fieldnames(a);
+            fb = fieldnames(b);
+            if ~isempty(setdiff(fa, fb))
+                equal = false;
+                return
+            end
+
+            for i = 1:numel(fa)
+                if isnumeric(b.(fa{i})) & isnumeric(a.(fa{i}))
+                    if sum((b.(fa{i}) - a.(fa{i})).^2) > 1e-12
+                        equal = false;
+                    end
+                else
+                    if b.(fa{i}) ~= a.(fa{i})
+                        equal = false;
+                    end
+                end
+                if ~equal
+                    return
+                end
+            end
+        end
+                    
         function delete_experiment(name, access_token)
             %% delete_experiment(name, access_token)
             %
@@ -415,10 +446,8 @@ classdef whetlab
                         self.ids_to_outcome_values.put(res_id, nan);
                     end
                 else
-                    % tmp{end+1} = v.('name');
-                    % tmp{end+1} = v.('value');
                     tmp.(v.('name')) = v.('value');
-                    self.ids_to_param_values.put(res_id, savejson('',tmp));
+                    self.ids_to_param_values.put(res_id, savejson('',tmp, 'FloatFormat', '%0.64f'));
                 end
             end
         end
@@ -428,6 +457,37 @@ classdef whetlab
         assert(self.experiment_id >= 0)
 
     end
+
+    function [jobs, outcomes] = get_all_results(self)
+        %% jobs, outcomes = get_all_results()
+        % Return the list of all jobs and corresponding outcomes
+        %
+        % * *returns:* An cell array of parameter values and a cell array of outcome values
+        % * *return type:* cell
+        % 
+        % Example usage::
+        %
+        %   % Create a new experiment
+        %   scientist = whetlab(name,
+        %               description,
+        %               parameters,
+        %               outcome, true, access_token)
+        %
+        %   % Get the list of results
+        %   jobs, outcomes = scientist.get_all_results()
+
+        % Sync with the REST server
+        self.sync_with_server();
+
+        % Find IDs of results with value nil and append parameters to returned list
+        jobs = {};
+        outcomes = {};
+        ids = self.ids_to_outcome_values.keySet().toArray();
+        for j = 1:length(ids)
+            outcomes{end+1} = self.ids_to_outcome_values.get(ids(j));
+            jobs{end+1} = loadjson(self.ids_to_param_values.get(ids(j)));
+        end
+    end % get_all_results()
 
     function pend = pending(self)
         %% pend = pending(self)
@@ -547,7 +607,7 @@ classdef whetlab
         end        
 
         % Keep track of id / param_values relationship
-        self.ids_to_param_values.put(result_id, savejson('',next));
+        self.ids_to_param_values.put(result_id, savejson('',next, 'FloatFormat', '%0.64f'));
         next.('result_id_') = result_id;
     end % suggest
 
@@ -573,13 +633,13 @@ classdef whetlab
         %   
         %   % Get the corresponding experiment id.
         %   id = scientist.get_id(job);
-        
-        
-        % Convert to a cell array if params are specified as a struct.
-        % Cell arrays allow for spaces in the param names.
-        % if isstruct(param_values)
-        %     param_values = whetlab.struct_2_cell_params(param_values);
-        % end
+
+        % Check to see if we have the result id
+        if (isfield(param_values,'result_id_') & param_values.result_id_ > 0 & ...
+            isfield(param_values, 'experiment_id_') & param_values.experiment_id_ == self.experiment_id)
+            id = param_values.result_id_;
+            return
+        end
 
         % First sync with the server
         self = self.sync_with_server();
@@ -592,7 +652,9 @@ classdef whetlab
         id = -1;
         keys = self.ids_to_param_values.keySet().toArray;
         for i = 1:numel(keys)
-            if isequal(savejson('', param_values), self.ids_to_param_values.get(keys(i)))
+            % Note we have to check for "almost" equality since the fp representation 
+            % can be fudged a bit during conversion from server
+            if whetlab.struct_almost_equal(param_values, loadjson(self.ids_to_param_values.get(keys(i))))
                 id = keys(i);
                 break;
             end
@@ -646,13 +708,8 @@ classdef whetlab
             error('Whetlab:ValueError', 'Update does not accept more than one result at a time');
         end
 
-
-        if isfield(param_values,'result_id_')
-            result_id = param_values.('result_id_');
-        else
-            % Check whether this param_values has a result ID
-            result_id = self.get_id(param_values);
-        end
+        % Check whether this param_values has a result ID
+        result_id = self.get_id(param_values);
 
         if result_id == -1
             % - Add new results with param_values and outcome_val
@@ -688,7 +745,7 @@ classdef whetlab
             %     param_values = whetlab.struct_2_cell_params(param_values)
             % end
 
-            self.ids_to_param_values.put(result_id, savejson('',param_values));
+            self.ids_to_param_values.put(result_id, savejson('',param_values, 'FloatFormat', '%0.64f'));
         else
             result = self.client.get_result(result_id);
 
@@ -704,12 +761,12 @@ classdef whetlab
                     elseif ~isfinite(outcome_val)
                         result.variables{i}.('value') = '-infinity';
                     end
-                    self.outcome_values.put(result_id, savejson('',var));
+                    self.outcome_values.put(result_id, savejson('',var, 'FloatFormat', '%0.64f'));
                     break % Assume only one outcome per experiment!
                 end
             end
 
-            self.param_values.put(result_id, savejson('',result));
+            self.param_values.put(result_id, savejson('',result, 'FloatFormat', '%0.64f'));
             self.client.update_result(result_id, result);
 
             % Remove this job from the pending list
@@ -884,5 +941,3 @@ classdef whetlab
     end
     end % methods
 end
-
-

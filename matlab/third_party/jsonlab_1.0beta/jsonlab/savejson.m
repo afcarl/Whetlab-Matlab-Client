@@ -331,7 +331,7 @@ if(isempty(mat))
     txt='null';
     return;
 end
-floatformat=jsonopt('FloatFormat','%.10g',varargin{:});
+floatformat=jsonopt('FloatFormat','%.64g',varargin{:});
 formatstr=['[' repmat([floatformat ','],1,size(mat,2)-1) [floatformat sprintf('],\n')]];
 
 if(nargin>=2 && size(mat,1)>1 && jsonopt('ArrayIndent',1,varargin{:})==1)

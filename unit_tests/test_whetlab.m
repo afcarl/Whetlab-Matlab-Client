@@ -117,8 +117,56 @@ classdef test_whetlab < matlab.unittest.TestCase
 
 		    [v, best] = max(results);
 		    job_best = rmfield(job(best),'result_id_');
-		    
 		    testCase.verifyTrue(isequaln(job_best, scientist.best()));
+		end
+
+		% Make sure what we pass to the server doesn't get
+		% clobbered somehow.
+		function testGetAllResults(testCase)
+		    parameters(1) = struct('name', 'Lambda', 'type','float',...
+		        'min',1e-4,'max',0.75,'size',1, 'isOutput',false);
+		    parameters(2) = struct('name', 'Alpha', 'type','float',...
+		        'min',1e-4,'max',1,'size',1, 'isOutput',false);
+		    parameters(3) = struct('name', 'nwidgets', 'type','integer',...
+		        'min',1,'max',100,'size',1, 'isOutput',false);
+		    outcome.name = 'Mojo';
+
+		    % Create a new experiment 
+		    scientist = whetlab(testCase.default_expt_name,...
+		                    'A great description',...
+		                    parameters,...
+		                    outcome, true, testCase.default_access_token, false);
+		    
+		    for i = 1:9
+		    	job(i) = scientist.suggest();
+		    end
+
+		    [jobs, outcomes] = scientist.get_all_results();
+		    for i = 1:numel(job)
+		    	equal = false;
+		    	testCase.verifyTrue(isnan(outcomes{i}));
+		    	for j = 1:numel(jobs)
+		    		if whetlab.struct_almost_equal(jobs{j}, job(i));
+		    			equal = true;
+		    			break
+		    		end
+		    	end
+		    	testCase.verifyTrue(equal);
+			end
+
+		    results = randn(9,1);
+		    for i = 1:9
+		    	scientist.update(job(i), results(i));		    	
+		    end
+
+		    [jobs, outcomes] = scientist.get_all_results();
+		    setdiff([outcomes{:}], results)
+
+		    testCase.verifyTrue(isempty(setdiff([outcomes{:}], results)));
+		    [tmp, ia, ib] = intersect([outcomes{:}], results);
+		    for i = 1:numel(ia)
+		    	testCase.verifyTrue(scientist.struct_almost_equal(jobs{ia(i)}, job(ib(i))));
+		    end
 		end
 
 		% Test that we can get the id of an experiment sent to the server.
@@ -147,8 +195,19 @@ classdef test_whetlab < matlab.unittest.TestCase
 		    end
 
 		    for i = 1:9
-		    	testCase.verifyGreaterThan(scientist.get_id(job(i)), 0)
+		    	testCase.verifyGreaterThan(scientist.get_id(job(i)), 0);
 		    end
+		end
+
+		function testStructEqual(testCase)
+			a = struct();
+			a.a = 'foo';
+			a.foo = randn();
+			a.blah = randn(5);
+
+			b = a;
+			b.foo = a.foo + 1e-16;
+			testCase.verifyTrue(whetlab.struct_almost_equal(a,b));
 		end
 
 		%% Empty experiment names shouldn't work. 
