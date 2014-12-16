@@ -3,7 +3,7 @@ addpath(genpath('../..'));
 % Define parameters to optimize
 parameters = {
     struct('name', 'numhid', 'type', 'integer', 'min', 10, 'max', 100);
-    struct('name', 'epsilon', 'type', 'float', 'min', 0.001, 'max',  0.01);
+    struct('name', 'epsilon', 'type', 'float', 'min', 0.001, 'max',  0.05);
     struct('name', 'momentum', 'type', 'float', 'min', 0.5, 'max', 0.99)
     struct('name', 'pretrain_maxepoch', 'type', 'integer', 'min', 1, 'max', 100);
     struct('name', 'maxepoch', 'type', 'integer', 'min', 1, 'max', 100);
