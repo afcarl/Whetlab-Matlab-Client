@@ -2,13 +2,14 @@ addpath(genpath('..'))
 
 % Define parameters to optimize
 parameters = {
-    struct('name', 'pretrain_maxepoch', 'type', 'integer', 'min', 0, 'max', 100);
+    struct('name', 'numhid', 'type', 'integer', 'min', 10, 'max', 100);
+    struct('name', 'epsilon', 'type', 'float', 'min', 0.001, 'max',  0.01);
+    struct('name', 'momentum', 'type', 'float', 'min', 0.5, 'max', 0.99)
+    struct('name', 'pretrain_maxepoch', 'type', 'integer', 'min', 1, 'max', 100);
     struct('name', 'maxepoch', 'type', 'integer', 'min', 10, 'max', 100);
     struct('name', 'weightcost', 'type', 'float', 'min', 0.0, 'max', 1.0);
     struct('name', 'pretrain_weightcost', 'type', 'float', 'min', 0.0, 'max', 1.0);
-    struct('name', 'epsilon', 'type', 'float', 'min', 0.001, 'max',  0.01);
-    struct('name', 'finalmomentum', 'type', 'float', 'min', 0.5, 'max', 0.99);
-    struct('name', 'numhid', 'type', 'integer', 'min', 10, 'max', 100)};
+};
 
 outcome.name = '# correct test examples';
 
@@ -33,7 +34,7 @@ for i = 1:50
   job = scientist.suggest();
   epsilon = job.epsilon;
   weightcost = job.weightcost;
-  finalmomentum = job.finalmomentum;
+  finalmomentum = job.momentum;
   numhid = job.numhid;
   pretrain_wc = job.pretrain_weightcost;
   pretrain_me = job.pretrain_maxepoch;

@@ -1,231 +1,159 @@
-% minimize.m - minimize a smooth differentiable multivariate function using
-% LBFGS (Limited memory LBFGS) or CG (Conjugate Gradients)
-% Usage: [X, fX, i] = minimize(X, F, p, other, ... )
-% where
-%   X    is an initial guess (any type: vector, matrix, cell array, struct)
-%   F    is the objective function (function pointer or name)
-%   p    parameters - if p is a number, it corresponds to p.length below
-%     p.length     allowed 1) # linesearches or 2) if -ve minus # func evals 
-%     p.method     minimization method, 'BFGS', 'LBFGS' or 'CG'
-%     p.verbosity  0 quiet, 1 line, 2 line + warnings (default), 3 graphical
-%     p.mem        number of directions used in LBFGS (default 100)
-%   other, ...     other parameters, passed to the function F
-%   X     returned minimizer
-%   fX    vector of function values showing minimization progress
-%   i     final number of linesearches or function evaluations
-% The function F must take the following syntax [f, df] = F(X, other, ...)
-% where f is the function value and df its partial derivatives. The types of X
-% and df must be identical (vector, matrix, cell array, struct, etc).
+function [X, fX, i, fIter] = minimize(X, f, length, varargin);
+
+% Minimize a differentiable multivariate function. 
 %
-% Copyright (C) 1996 - 2011 by Carl Edward Rasmussen, 2011-10-06.
-
-% Permission is hereby granted, free of charge, to any person OBTAINING A COPY
-% OF THIS SOFTWARE AND ASSOCIATED DOCUMENTATION FILES (THE "SOFTWARE"), TO DEAL
-% IN THE SOFTWARE WITHOUT RESTRICTION, INCLUDING WITHOUT LIMITATION THE RIGHTS
-% to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-% copies of the Software, and to permit persons to whom the Software is
-% furnished to do so, subject to the following conditions:
+% Usage: [X, fX, i] = minimize(X, f, length, P1, P2, P3, ... )
 %
-% The above copyright notice and this permission notice shall be included in
-% all copies or substantial portions of the Software.
+% where the starting point is given by "X" (D by 1), and the function named in
+% the string "f", must return a function value and a vector of partial
+% derivatives of f wrt X, the "length" gives the length of the run: if it is
+% positive, it gives the maximum number of line searches, if negative its
+% absolute gives the maximum allowed number of function evaluations. You can
+% (optionally) give "length" a second component, which will indicate the
+% reduction in function value to be expected in the first line-search (defaults
+% to 1.0). The parameters P1, P2, P3, ... are passed on to the function f.
 %
-% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-% IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-% FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-% AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-% LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-% SOFTWARE.
+% The function returns when either its length is up, or if no further progress
+% can be made (ie, we are at a (local) minimum, or so close that due to
+% numerical problems, we cannot get any closer). NOTE: If the function
+% terminates within a few iterations, it could be an indication that the
+% function values and derivatives are not consistent (ie, there may be a bug in
+% the implementation of your "f" function). The function returns the found
+% solution "X", a vector of function values "fX" indicating the progress made
+% and "i" the number of iterations (line searches or function evaluations,
+% depending on the sign of "length") used.
+%
+% The Polack-Ribiere flavour of conjugate gradients is used to compute search
+% directions, and a line search using quadratic and cubic polynomial
+% approximations and the Wolfe-Powell stopping criteria is used together with
+% the slope ratio method for guessing initial step sizes. Additionally a bunch
+% of checks are made to make sure that exploration is taking place and that
+% extrapolation will not be unboundedly large.
+%
+% See also: checkgrad 
+%
+% Copyright (C) 2001 - 2006 by Carl Edward Rasmussen (2006-02-23).
 
-function [X, fX, i] = minimize(X, F, p, varargin)
-if isnumeric(p), p = struct('length', p); end             % convert p to struct
-if p.length > 0, p.S = 'linesearch #'; else p.S = 'function evaluation #'; end;
-x = unwrap(X);                                % convert initial guess to vector
-if ~isfield(p,'method'), if length(x) > 1000, p.method = @LBFGS;
-                         else p.method = @BFGS; end; end   % set default method
-if ~isfield(p,'verbosity'), p.verbosity = 2; end   % default 1 line text output
-if ~isfield(p,'MFEPLS'), p.MFEPLS = 20; end    % Max Func Evals Per Line Search
-if ~isfield(p,'MSR'), p.MSR = 100; end                % Max Slope Ratio default
-f(F, X, varargin{:});                                   % set up the function f
-[fx, dfx] = f(x);                      % initial function value and derivatives 
-if p.verbosity, printf('Initial Function Value %4.6e\r', fx); end
-if p.verbosity > 2,
-  clf; subplot(211); hold on; xlabel(p.S); ylabel('function value');
-  plot(p.length < 0, fx, '+'); drawnow;
-end
-[x, fX, i] = feval(p.method, x, fx, dfx, p);  % minimize using direction method 
-X = rewrap(X, x);                   % convert answer to original representation
-if p.verbosity, printf('\n'); end
+INT = 0.1;    % don't reevaluate within 0.1 of the limit of the current bracket
+EXT = 3.0;                  % extrapolate maximum 3 times the current step-size
+MAX = 20;                         % max 20 function evaluations per line search
+RATIO = 10;                                       % maximum allowed slope ratio
+SIG = 0.1; RHO = SIG/2; % SIG and RHO are the constants controlling the Wolfe-
+% Powell conditions. SIG is the maximum allowed absolute ratio between
+% previous and new slopes (derivatives in the search direction), thus setting
+% SIG to low (positive) values forces higher precision in the line-searches.
+% RHO is the minimum allowed fraction of the expected (from the slope at the
+% initial point in the linesearch). Constants must satisfy 0 < RHO < SIG < 1.
+% Tuning of SIG (depending on the nature of the function to be optimized) may
+% speed up the minimization; it is probably not worth playing much with RHO.
 
-function [x, fx, i] = CG(x0, fx0, dfx0, p);
-if ~isfield(p, 'SIG'), p.SIG = 0.1; end       % default for line search quality 
-i = p.length < 0;                                 % initialize resource counter
-r = -dfx0; s = -r'*r; b = -1/s; bs = -1; ok = 0; fx = fx0;   % steepest descent
-while i < abs(p.length)
-  b = b*bs/min(b*s,bs/p.MSR);    % suitable initial step size using slope ratio
-  [x, b, fx0, dfx, i] = lineSearch(x0, fx0, dfx0, r, s, b, i, p);
-  if i < 0                                              % if line search failed
-    i = -i; if ok, ok = 0; r = -dfx; else break; end     % try steepest or stop
-  else
-    ok = 1; bs = b*s;        % record step times slope (for slope ratio method)
-    r = (dfx'*(dfx-dfx0))/(dfx0'*dfx0)*r - dfx;             % Polack-Ribiere CG
-  end  
-  s = r'*dfx; if s >= 0, r = -dfx; s = r'*dfx; ok = 0; end  % slope must be -ve 
-  x0 = x; dfx0 = dfx; fx = [fx; fx0];        % replace old values with new ones
-end
+% The code falls naturally into 3 parts, after the initial line search is
+% started in the direction of steepest descent. 1) we first enter a while loop
+% which uses point 1 (p1) and (p2) to compute an extrapolation (p3), until we
+% have extrapolated far enough (Wolfe-Powell conditions). 2) if necessary, we
+% enter the second loop which takes p2, p3 and p4 chooses the subinterval
+% containing a (local) minimum, and interpolates it, unil an acceptable point
+% is found (Wolfe-Powell conditions). Note, that points are always maintained
+% in order p0 <= p1 <= p2 < p3 < p4. 3) compute a new search direction using
+% conjugate gradients (Polack-Ribiere flavour), or revert to steepest if there
+% was a problem in the previous line-search. Return the best value so far, if
+% two consecutive line-searches fail, or whenever we run out of function
+% evaluations or line-searches. During extrapolation, the "f" function may fail
+% either with an error or returning Nan or Inf, and minimize should handle this
+% gracefully.
 
-function [x, fx, i] = BFGS(x0, fx0, dfx0, p);
-if ~isfield(p, 'SIG'), p.SIG = 0.5; end       % default for line search quality
-i = p.length < 0;                                 % initialize resource counter
-x = x0; fx = fx0; r = -dfx0; s = -r'*r; b = -1/s; ok = 0; H = eye(length(x0));
-while i < abs(p.length)
-  [x, b, fx0, dfx, i] = lineSearch(x0, fx0, dfx0, r, s, b, i, p); 
-  if i < 0
-    i = -i; if ok, ok = 0; else break; end;              % try steepest or stop
-  else
-    ok = 1; t = x - x0; y = dfx - dfx0; ty = t'*y; Hy = H*y;
-    H = H + (ty+y'*Hy)/ty^2*t*t' - 1/ty*Hy*t' - 1/ty*t*Hy';       % BFGS update
-  end
-   r = -H*dfx; s = r'*dfx; x0 = x; dfx0 = dfx; fx = [fx; fx0];
-end
+if max(size(length)) == 2, red=length(2); length=length(1); else red=1; end
+if length>0, S=['Linesearch']; else S=['Function evaluation']; end 
 
-function [x, fx, i] = LBFGS(x0, fx0, dfx0, p);
-if ~isfield(p, 'SIG'), p.SIG = 0.5; end       % default for line search quality
-n = length(x0); k = 0; ok = 0; x = x0; fx = fx0; bs = -1/p.MSR;
-if isfield(p, 'mem'), m = p.mem; else m = min(100, n); end    % set memory size
-a = zeros(1, m); t = zeros(n, m); y = zeros(n, m);            % allocate memory
-i = p.length < 0;                                 % initialize resource counter
-while i < abs(p.length)
-  q = dfx0;
-  for j = rem(k-1:-1:max(0,k-m),m)+1
-    a(j) = t(:,j)'*q/rho(j); q = q-a(j)*y(:,j);
-  end
-  if k == 0, r = -q/(q'*q); else r = -t(:,j)'*y(:,j)/(y(:,j)'*y(:,j))*q; end
-  for j = rem(max(0,k-m):k-1,m)+1
-    r = r-t(:,j)*(a(j)+y(:,j)'*r/rho(j));
-  end
-  s = r'*dfx0; if s >= 0, r = -dfx0; s = r'*dfx0; k = 0; ok = 0; end
-  b = bs/min(bs,s/p.MSR);              % suitable initial step size (usually 1)
-  if isnan(r) | isinf(r)                                % if nonsense direction
-    i = -i;                                              % try steepest or stop
-  else
-    [x, b, fx0, dfx, i] = lineSearch(x0, fx0, dfx0, r, s, b, i, p); 
-  end
-  if i < 0                                              % if line search failed
-    i = -i; if ok, ok = 0; k = 0; else break; end        % try steepest or stop
-  else
-    j = rem(k,m)+1; t(:,j) = x-x0; y(:,j) = dfx-dfx0; rho(j) = t(:,j)'*y(:,j);
-    ok = 1; k = k+1; bs = b*s;
-  end
-  x0 = x; dfx0 = dfx; fx = [fx; fx0];                  % replace and add values
-end
+i = 0;                                            % zero the run length counter
+ls_failed = 0;                             % no previous line search has failed
+[f0 df0] = feval(f, X, varargin{:});          % get function value and gradient
+fX = f0;
+fIter = 0; 
+i = i + (length<0);                                            % count epochs?!
+s = -df0; d0 = -s'*s;           % initial search direction (steepest) and slope
+x3 = red/(1-d0);                                  % initial step is red/(|s|+1)
 
-function [x, a, fx, df, i] = lineSearch(x0, f0, df0, d, s, a, i, p)
-INT = 0.1; EXT = 5.0;                    % interpolate and extrapolation limits
-if p.length < 0, LIMIT = min(p.MFEPLS, -i-p.length); else LIMIT = p.MFEPLS; end
-p0.x = 0.0; p0.f = f0; p0.df = df0; p0.s = s; p1 = p0;         % init p0 and p1
-j = 0; p3.x = a; wp(p0, p.SIG, p.SIG/2);   % set step & Wolfe-Powell conditions
-if p.verbosity > 2
-  A = [-a a]/5; nd = norm(d);
-  subplot(212); hold off; plot(0, f0, 'k+'); hold on; plot(nd*A, f0+s*A, 'k-');
-  xlabel('distance in line search direction'); ylabel('function value');
-end
-while 1                               % keep extrapolating as long as necessary
-  ok = 0; while ~ok & j < LIMIT
-    try           % try, catch and bisect to safeguard extrapolation evaluation
-      [p3.f p3.df] = f(x0+p3.x*d); j = j+1; p3.s = p3.df'*d; ok = 1; 
-      if isnan(p3.f+p3.s) | isinf(p3.f+p3.s)
-        error('Objective function returned Inf or NaN','');
-      end;
-    catch
-      if p.verbosity > 1, printf('\n'); warning(lasterr); end % warn or silence
-      p3.x = (p1.x+p3.x)/2; ok = 0; p3.f = NaN;             % bisect, and retry
+while i < abs(length)                                      % while not finished
+  i = i + (length>0);                                      % count iterations?!
+
+  X0 = X; F0 = f0; dF0 = df0;                   % make a copy of current values
+  if length>0, M = MAX; else M = min(MAX, -length-i); end
+
+  while 1                             % keep extrapolating as long as necessary
+    x2 = 0; f2 = f0; d2 = d0; df2 = df0; f3 = f0; df3 = df0;
+    success = 0;
+    while ~success & M > 0
+      try
+        M = M - 1; i = i + (length<0);                         % count epochs?!
+        [f3 df3] = feval(f, X+x3*s, varargin{:});
+        if isnan(f3) | isinf(f3) | any(isnan(df3)+isinf(df3)), error, end
+        success = 1;
+      catch                                % catch any error which occured in f
+        x3 = (x2+x3)/2;                                  % bisect and try again
+      end
     end
-  end
-  if p.verbosity > 2
-    plot(nd*p3.x, p3.f, 'b+'); plot(nd*(p3.x+A), p3.f+p3.s*A, 'b-'); drawnow
-  end
-  if wp(p3) | j >= LIMIT, break; end                                    % done?
-  p0 = p1; p1 = p3;                                 % move points back one unit
-  a = p1.x-p0.x; b = minCubic(a, p1.f-p0.f, p0.s, p1.s);  % cubic extrapolation
-  if ~isreal(b) || isnan(b) || isinf(b) || b < a || b > a*EXT     % if b is bad
-    b = a*EXT;                                % then extrapolate maximum amount
-  end
-  p3.x = p0.x+max(b, p1.x+INT*a);             % move away from current, off-set 
-end
-while 1                               % keep interpolating as long as necessary
-  if p1.f > p3.f, p2 = p3; else p2 = p1; end          % make p2 the best so far
-  if wp(p2) > 1 | j >= LIMIT, break; end                                % done?
-  a = p3.x-p1.x; b = minCubic(a, p3.f-p1.f, p1.s, p3.s);  % cubic interpolation
-  if ~isreal(b) || isnan(b) || isinf(b) || b < 0 || b > a         % if b is bad
-    b = a/2;                                                      % then bisect
-  end
-  p2.x = p1.x+min(max(b, INT*a), (1-INT)*a);  % move away from current, off-set 
-  [p2.f p2.df] = f(x0+p2.x*d); j = j+1; p2.s = p2.df'*d;
-  if p.verbosity > 2
-    plot(nd*p2.x, p2.f, 'r+'); plot(nd*(p2.x+A), p2.f+p2.s*A, 'r'); drawnow
-  end
-  if wp(p2) > -1 & p2.s > 0 | wp(p2) < -1, p3 = p2; else p1 = p2; end % bracket
-end
-x = x0+p2.x*d; fx = p2.f; df = p2.df; a = p2.x;        % return the value found
-if p.length < 0, i = i+j; else i = i+1; end % count func evals or line searches
-if p.verbosity, printf('%s %6i;  value %4.6e\r', p.S, i, fx); end 
-if wp(p2) < 2, i = -i; end                                   % indicate faliure 
-if p.verbosity > 2
-  if i>0, plot(norm(d)*p2.x, fx, 'go'); end
-  subplot(211); plot(abs(i), fx, '+'); drawnow;
-end
+    if f3 < F0, X0 = X+x3*s; F0 = f3; dF0 = df3; end         % keep best values
+    d3 = df3'*s;                                                    % new slope
+    if d3 > SIG*d0 | f3 > f0+x3*RHO*d0 | M == 0    % are we done extrapolating?
+      break
+    end
+    x1 = x2; f1 = f2; d1 = d2; df1 = df2;             % move point 2 to point 1
+    x2 = x3; f2 = f3; d2 = d3; df2 = df3;             % move point 3 to point 2
+    A = 6*(f1-f2)+3*(d2+d1)*(x2-x1);                 % make cubic extrapolation
+    B = 3*(f2-f1)-(2*d1+d2)*(x2-x1);
+    x3 = x1-d1*(x2-x1)^2/(B+sqrt(B*B-A*d1*(x2-x1))); % num. error possible, ok!
+    if ~isreal(x3) | isnan(x3) | isinf(x3) | x3 < 0   % num prob or wrong sign?
+      x3 = x2*EXT;                                 % extrapolate maximum amount
+    elseif x3 > x2*EXT                  % new point beyond extrapolation limit?
+      x3 = x2*EXT;                                 % extrapolate maximum amount
+    elseif x3 < x2+INT*(x2-x1)         % new point too close to previous point?
+      x3 = x2+INT*(x2-x1);
+    end
+  end                                                       % end extrapolation
 
-function x = minCubic(x, df, s0, s1)  % return minimizer of approximating cubic
-A = -6*df+3*(s0+s1)*x; B = 3*df-(2*s0+s1)*x; x = -s0*x*x/(B+sqrt(B*B-A*s0*x));
+  while (abs(d3) > -SIG*d0 | f3 > f0+x3*RHO*d0) & M > 0    % keep interpolating
+    if d3 > 0 | f3 > f0+x3*RHO*d0                          % choose subinterval
+      x4 = x3; f4 = f3; d4 = d3; df4 = df3;           % move point 3 to point 4
+    else
+      x2 = x3; f2 = f3; d2 = d3; df2 = df3;           % move point 3 to point 2
+    end
+    if f4 > f0           
+      x3 = x2-(0.5*d2*(x4-x2)^2)/(f4-f2-d2*(x4-x2));  % quadratic interpolation
+    else
+      A = 6*(f2-f4)/(x4-x2)+3*(d4+d2);                    % cubic interpolation
+      B = 3*(f4-f2)-(2*d2+d4)*(x4-x2);
+      x3 = x2+(sqrt(B*B-A*d2*(x4-x2)^2)-B)/A;        % num. error possible, ok!
+    end
+    if isnan(x3) | isinf(x3)
+      x3 = (x2+x4)/2;               % if we had a numerical problem then bisect
+    end
+    x3 = max(min(x3, x4-INT*(x4-x2)),x2+INT*(x4-x2));  % don't accept too close
+    [f3 df3] = feval(f, X+x3*s, varargin{:});
+    if f3 < F0, X0 = X+x3*s; F0 = f3; dF0 = df3; end         % keep best values
+    M = M - 1; i = i + (length<0);                             % count epochs?!
+    d3 = df3'*s;                                                    % new slope
+  end                                                       % end interpolation
 
-function y = wp(p, SIG, RHO)
-persistent a b c sig rho;
-if nargin == 3    % if three arguments, then set up the Wolfe-Powell conditions
-  a = RHO*p.s; b = p.f; c = -SIG*p.s; sig = SIG; rho = RHO; y= 0;
-else
-  if p.f > a*p.x+b                                  % function value too large?
-    if a > 0, y = -1; else y = -2; end                  
+  if abs(d3) < -SIG*d0 & f3 < f0+x3*RHO*d0           % if line search succeeded
+    X = X+x3*s; f0 = f3; fX = [fX' f0]'; fIter = [fIter' i]';  % update variables
+    fprintf('%s %6i;  Value %4.6e\n', S, i, f0);
+    s = (df3'*df3-df0'*df3)/(df0'*df0)*s - df3;   % Polack-Ribiere CG direction
+    df0 = df3;                                               % swap derivatives
+    d3 = d0; d0 = df0'*s;
+    if d0 > 0                                      % new slope must be negative
+      s = -df0; d0 = -s'*s;                  % otherwise use steepest direction
+    end
+    x3 = x3 * min(RATIO, d3/(d0-realmin));          % slope ratio but max RATIO
+    ls_failed = 0;                              % this line search did not fail
   else
-    if p.s < -c, y = 0; elseif p.s > c, y = 1; else y = 2; end
-    if sig*abs(p.s) > c, a = rho*p.s; b = p.f-a*p.x; c = sig*abs(p.s); end
+    X = X0; f0 = F0; df0 = dF0;                     % restore best point so far
+    if ls_failed | i > abs(length)          % line search failed twice in a row
+      break;                             % or we ran out of time, so we give up
+    end
+    s = -df0; d0 = -s'*s;                                        % try steepest
+    x3 = 1/(1-d0);                     
+    ls_failed = 1;                                    % this line search failed
   end
 end
-
-function [fx, dfx] = f(varargin);
-persistent F p;
-if nargout == 0
-  p = varargin; if ischar(p{1}), F = str2func(p{1}); else F = p{1}; end
-else
-  [fx, dfx] = F(rewrap(p{2}, varargin{1}), p{3:end}); dfx = unwrap(dfx);
-end
-
-function v = unwrap(s)   % extract num elements of s (any type) into v (vector) 
-v = [];   
-if isnumeric(s)
-  v = s(:);                        % numeric values are recast to column vector
-elseif isstruct(s)
-  v = unwrap(struct2cell(orderfields(s))); % alphabetize, conv to cell, recurse
-elseif iscell(s)                                      % cell array elements are
-  for i = 1:numel(s), v = [v; unwrap(s{i})]; end         % handled sequentially
-end                                                   % other types are ignored
-
-function [s v] = rewrap(s, v)    % map elements of v (vector) onto s (any type)
-if isnumeric(s)
-  if numel(v) < numel(s)
-    error('The vector for conversion contains too few elements')
-  end
-  s = reshape(v(1:numel(s)), size(s));            % numeric values are reshaped
-  v = v(numel(s)+1:end);                        % remaining arguments passed on
-elseif isstruct(s) 
-  [s p] = orderfields(s); p(p) = 1:numel(p);      % alphabetize, store ordering
-  [t v] = rewrap(struct2cell(s), v);                 % convert to cell, recurse
-  s = orderfields(cell2struct(t,fieldnames(s),1),p);  % conv to struct, reorder
-elseif iscell(s)
-  for i = 1:numel(s)             % cell array elements are handled sequentially
-    [s{i} v] = rewrap(s{i}, v);
-  end
-end                                             % other types are not processed
-
-function printf(varargin);
-fprintf(varargin{:}); if exist('fflush','builtin') fflush(stdout); end
+fprintf('\n');

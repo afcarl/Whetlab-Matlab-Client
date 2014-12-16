@@ -29,4 +29,9 @@ function [terrs, crosste, errs, allterrors] = classbp2cg(w1, w_class, data, targ
       terrs = sum(preds ~= corr);
       allterrors = [allterrors; terrs];
       fprintf('err: %f, terr: %f\n', errs, terrs);
+      if (size(allterrors,1) > 5)
+        if (allterrors(end) - allterrors(end-2) == 0) && (allterrors(end) - allterrors(end-1) == 0)
+          break
+        end
+      end
   end
