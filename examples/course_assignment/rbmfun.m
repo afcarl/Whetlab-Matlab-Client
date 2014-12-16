@@ -10,7 +10,7 @@ initialmomentum  = 0.5;
 
   [numcases numdims]=size(data);
 
-  epoch=0;
+  epoch=1;
 %  poshidprobs = zeros(numcases,numhid);
 %  neghidprobs = zeros(numcases,numhid);
 %  posprods    = zeros(numdims,numhid);
