@@ -6,9 +6,9 @@ parameters = {
     struct('name', 'epsilon', 'type', 'float', 'min', 0.001, 'max',  0.05);
     struct('name', 'momentum', 'type', 'float', 'min', 0.5, 'max', 0.99)
     struct('name', 'pretrain_maxepoch', 'type', 'integer', 'min', 0, 'max', 100);
-    struct('name', 'maxepoch', 'type', 'integer', 'min', 1, 'max', 100);
-    struct('name', 'weightcost', 'type', 'float', 'min', 0.0, 'max', 1.0);
-    struct('name', 'pretrain_weightcost', 'type', 'float', 'min', 0.0, 'max', 1.0);
+    struct('name', 'maxepoch', 'type', 'integer', 'min', 5, 'max', 100);
+    struct('name', 'weightcost', 'type', 'float', 'min', 0.0, 'max', 0.5);
+    struct('name', 'pretrain_weightcost', 'type', 'float', 'min', 0.0, 'max', 0.5);
 };
 
 outcome.name = '# correct test examples';
