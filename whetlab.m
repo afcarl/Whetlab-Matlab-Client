@@ -308,6 +308,15 @@ classdef whetlab
                 if param.('min') >= param.('max')
                     error('Whetlab:ValueError', ['Parameter ' param.name ': min should be smaller than max.']);
                 end
+
+                if (~isfinite(param.('min')) | ~isfinite(param.('max')))
+                    error('Whetlab:ValueError', ['Parameter ' param.name ': min and max should be finite.']);
+                end
+
+                if (numel(param.('min')) ~= 1 | numel(param.('max')) ~= 1)
+                    error('Whetlab:ValueError', ['Parameter ' param.name ': min and max should each be a single number.']);
+                end
+
             end
             settings{i} = param;
 

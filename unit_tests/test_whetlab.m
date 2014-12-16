@@ -269,7 +269,44 @@ classdef test_whetlab < matlab.unittest.TestCase
 			end
 		end
 
-		%% Empty outcome names shouldn't work. 
+		%% Min and Max should be finite numbers
+		function testMinMaxAreFinite(testCase)
+			vals = [nan, inf, -inf];
+		    parameters(1) = struct('name', 'Lambda', 'type','float',...
+		        'min',-inf,'max',0.25,'size',1, 'isOutput',false);
+		    parameters(2) = struct('name', 'Alpha', 'type','float',...
+		        'min',1e-4,'max',inf,'size',1, 'isOutput', false);
+		    outcome.name = 'Negative deviance';
+
+		    for i = 1:3
+		    	parameters(3) = struct('name', 'Phi', 'type','float',...
+		        'min',1e-4,'max', vals(i),'size',1, 'isOutput', false);
+				try
+					% Create a new experiment 
+					whetlab(testCase.default_expt_name,...
+		                    'Foo',...
+		                    parameters,...
+		                    outcome, true, testCase.default_access_token, false);
+				catch err
+					testCase.verifyTrue(strcmp(err.identifier, 'Whetlab:ValueError'));
+					testCase.verifySubstring(err.message, 'min and max should be finite.');
+				end
+		    	parameters(3) = struct('name', 'Phi', 'type','float',...
+		        'min',vals(i),'max',0.7,'size',1, 'isOutput', false);
+				try
+					% Create a new experiment 
+					whetlab(testCase.default_expt_name,...
+		                    'Foo',...
+		                    parameters,...
+		                    outcome, true, testCase.default_access_token, false);
+				catch err
+					testCase.verifyTrue(strcmp(err.identifier, 'Whetlab:ValueError'));
+					testCase.verifySubstring(err.message, 'min and max should be finite.');
+				end				
+			end
+		end
+
+ 		%% Empty outcome names shouldn't work. 
 		function emptyOutcome(testCase)    
 		    parameters(1) = struct('name', 'Lambda', 'type','float',...
 		        'min',0.75,'max',1.25,'size',1, 'isOutput',false);

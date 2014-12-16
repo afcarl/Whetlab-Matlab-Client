@@ -30,7 +30,7 @@ classdef SimpleREST
         %%
         % Checks whether ``err`` is an error for which we do retries.
         %%
-
+ 
         % Get the HTTP status code from the error message
         if (strcmp(err.identifier, 'MATLAB:HttpConection:ConnectionError'))
             [startIndex,endIndex] = regexp(err.message,'code:\d+/');
