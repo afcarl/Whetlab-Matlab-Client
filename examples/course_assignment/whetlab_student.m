@@ -70,6 +70,3 @@ for i = 1:50
   y = 3000 - terrors;
   scientist.update(job, 3000-y);
 end
-
-defaultStream.State = savedState;
-RandStream.setGlobalStream(defaultStream);
