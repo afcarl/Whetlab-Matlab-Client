@@ -10,7 +10,7 @@ initialmomentum  = 0.5;
 
   [numcases numdims]=size(data);
 
-  epoch=1;
+  epoch=0;
 %  poshidprobs = zeros(numcases,numhid);
 %  neghidprobs = zeros(numcases,numhid);
 %  posprods    = zeros(numdims,numhid);
@@ -57,12 +57,12 @@ poshidstates = poshidprobs > rand(numcases,numhid);
     visbiases = visbiases + visbiasinc;
     hidbiases = hidbiases + hidbiasinc;
 
-    if rem(epoch,100000) ==0,
-      showrbmweights;
-      drawnow;
-    end;
+    % if rem(epoch,100000) ==0,
+    %   showrbmweights;
+    %   drawnow;
+    % end;
 
-    if rem(epoch,10) ==0,
+    if rem(epoch,10) == 0,
       fprintf(1, 'numhid %4.0i epoch %4.0i  reconstruction error %6.1f  \n', numhid, epoch, errsum); 
     end;
    
