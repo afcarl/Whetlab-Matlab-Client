@@ -14,7 +14,7 @@ parameters = {
 outcome.name = '# correct test examples';
 
 accessToken = ''; % Either replace this with your access token or put it in your ~/.whetlab file.
-name = 'CSC321 A4 - Automated Student';
+name = 'CSC321 A4 - Automated Student-N';
 description = 'Automate the completion of CSC 321 assignment 4 - Tuning neural net hyperparameters to get at least 2500 correct test cases (500 test errors).';
 
 % Create a new experiment
