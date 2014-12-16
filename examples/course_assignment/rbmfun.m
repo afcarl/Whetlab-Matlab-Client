@@ -1,11 +1,11 @@
-function [hidbiases, vishid] = rbmfun(data,numhid,weightcost,maxepoch);
+function [hidbiases, vishid] = rbmfun(data,numhid,weightcost,maxepoch,epsilon,finalmomentum);
 
-epsilonw      = 0.05;
-epsilonvb     = 0.05;
-epsilonhb     = 0.05;
+epsilonw      = epsilon;%0.05;
+epsilonvb     = epsilon;%0.05;
+epsilonhb     = epsilon;%0.05;
 
 initialmomentum  = 0.5;
-finalmomentum    = 0.9;
+% finalmomentum    = 0.9;
 
 
   [numcases numdims]=size(data);
