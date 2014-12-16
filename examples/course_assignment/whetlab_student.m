@@ -49,10 +49,4 @@ for i = 1:50
   % The objective is the number of correct test examples
   scientist.update(job, 3000 - terrors);
 
-  % Also tell whetlab about the best we've seen so far over epochs
-  [y,ind] = min(allterrors);
-  if ind ~= job.maxepoch && y < terrors
-    job.maxepoch = ind;
-    scientist.update(job, 3000 - y);
-  end
 end
