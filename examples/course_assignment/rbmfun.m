@@ -67,3 +67,6 @@ poshidstates = poshidprobs > rand(numcases,numhid);
     end;
    
 end;
+
+hidbiases = double(hidbiases);
+vishid = double(vishid);
