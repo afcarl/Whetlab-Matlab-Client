@@ -1,22 +1,14 @@
-% Run RBM pretraining with x as the hyperparameters
-% Spits out test error and time taken
 addpath(genpath('..'))
 
 % Define parameters to optimize
-parameters{1} = struct('name', 'epsilon', 'type','float',...
-    'min', 0.001, 'max',  0.01, 'size', 1);
-parameters{2} = struct('name', 'maxepoch', 'type','integer',...
-    'min', 10, 'max', 100, 'size', 1);
-parameters{3} = struct('name', 'finalmomentum', 'type','float',...
-    'min', 0.5, 'max', 0.99, 'size', 1);
-parameters{4} = struct('name', 'numhid', 'type','integer',...
-    'min', 10, 'max', 100, 'size', 1);
-parameters{5} = struct('name', 'pretrain_maxepoch', 'type','integer',...
-    'min', 0, 'max', 100, 'size', 1);
-parameters{6} = struct('name', 'weightcost', 'type','float',...
-    'min', 0.0, 'max', 1.0, 'size', 1);
-parameters{7} = struct('name', 'pretrain_weightcost', 'type','float',...
-    'min', 0.0, 'max', 1.0, 'size', 1);
+parameters = {
+    struct('name', 'pretrain_maxepoch', 'type', 'integer', 'min', 0, 'max', 100);
+    struct('name', 'maxepoch', 'type', 'integer', 'min', 10, 'max', 100);
+    struct('name', 'weightcost', 'type', 'float', 'min', 0.0, 'max', 1.0);
+    struct('name', 'pretrain_weightcost', 'type', 'float', 'min', 0.0, 'max', 1.0);
+    struct('name', 'epsilon', 'type', 'float', 'min', 0.001, 'max',  0.01);
+    struct('name', 'finalmomentum', 'type', 'float', 'min', 0.5, 'max', 0.99);
+    struct('name', 'numhid', 'type', 'integer', 'min', 10, 'max', 100)};
 
 outcome.name = '# correct test examples';
 
@@ -33,9 +25,6 @@ scientist = whetlab(name,...
 % Load in data
 load unlabeled.mat
 load assign2data2011.mat
-
-defaultStream = RandStream.getGlobalStream;
-savedState = defaultStream.State;
 
 % Loop over requesting parameters and training models
 for i = 1:50
@@ -58,15 +47,12 @@ for i = 1:50
   [hidbiases, vishid] = rbmfun(...
       [double(data); unlabeleddata], numhid, pretrain_wc, pretrain_me);
 
-  hidbiases = double(hidbiases);
-  vishid = double(vishid);
   % Now perform classification using backprop
-  restart = 1;
-  w_class = 0.01.*randn(size(vishid,2)+1, size(targets,2));
+  w_class = 0.01.*randn(size(vishid,2)+1, size(targets,2)); restart = 1;
   [terrors, crosste, errs, allterrors] = classbp2cg([vishid; hidbiases], w_class, data, targets,...
     testdata, testtargets, maxepoch, weightcost);
 
   % The objective is the number of correct test examples
   y = 3000 - terrors;
-  scientist.update(job, 3000-y);
+  scientist.update(job, y);
 end
