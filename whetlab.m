@@ -336,8 +336,7 @@ classdef whetlab
             experiment_id = self.client.create(name, description, settings);
         catch err
             % Resume, unless got a ConnectionError
-            if resume && ...
-                ~strcmp(err.identifier, 'MATLAB:HttpConection:ConnectionError')
+            if resume && strfind(err.message, 'already exists')
                 % This experiment was just already created - race condition.
                 self = self.sync_with_server();
                 return
