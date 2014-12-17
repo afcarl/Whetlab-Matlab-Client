@@ -339,8 +339,7 @@ classdef whetlab
 	    err.identifier
 	    err.message
             % Resume, unless got a ConnectionError
-            if resume && ...
-                ~strcmp(err.identifier, 'MATLAB:HttpConection:ConnectionError')
+            if resume && strfind(err.message, 'already exists')
                 % This experiment was just already created - race condition.
                 self = self.sync_with_server();
                 return

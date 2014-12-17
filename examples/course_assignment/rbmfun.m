@@ -1,4 +1,4 @@
-function [hidbiases, vishid] = rbmfun(data,numhid,weightcost,maxepoch,epsilon,finalmomentum);
+function [hidbiases, vishid] = rbmfun(data,numhid,weightcost,maxepoch,epsilon,finalmomentum, pretrain);
 
 epsilonw      = epsilon;%0.05;
 epsilonvb     = epsilon;%0.05;
@@ -7,6 +7,9 @@ epsilonhb     = epsilon;%0.05;
 initialmomentum  = 0.5;
 % finalmomentum    = 0.9;
 
+if strcmp(pretrain, 'No')
+  maxepoch = 0;
+end
 
   [numcases numdims]=size(data);
 
@@ -15,7 +18,8 @@ initialmomentum  = 0.5;
 %  neghidprobs = zeros(numcases,numhid);
 %  posprods    = zeros(numdims,numhid);
 %  negprods    = zeros(numdims,numhid);
-  vishid     = 0.03*randn(numdims, numhid);
+  % vishid     = 0.03*randn(numdims, numhid);
+  vishid     = numdims^-0.5 * randn(numdims, numhid);
   hidbiases  = 0*ones(1,numhid);
   visbiases  = zeros(1,numdims);
   vishidinc  = zeros(numdims,numhid);

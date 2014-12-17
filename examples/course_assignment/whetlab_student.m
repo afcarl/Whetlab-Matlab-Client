@@ -3,10 +3,11 @@ addpath(genpath('../..'));
 % Define parameters to optimize
 parameters = {
     struct('name', 'numhid', 'type', 'integer', 'min', 10, 'max', 100);
-    struct('name', 'epsilon', 'type', 'float', 'min', 0.001, 'max',  0.1);
-    struct('name', 'momentum', 'type', 'float', 'min', 0.7, 'max', 0.95)
-    struct('name', 'pretrain_maxepoch', 'type', 'integer', 'min', 0, 'max', 200);
-    struct('name', 'maxepoch', 'type', 'integer', 'min', 5, 'max', 100);
+    struct('name', 'epsilon', 'type', 'float', 'min', 0.01, 'max',  0.1);
+    struct('name', 'momentum', 'type', 'float', 'min', 0.7, 'max', 0.95);
+    struct('name', 'pretrain', 'type', 'enum', 'options', {{'Yes' 'No'}});
+    struct('name', 'pretrain_maxepoch', 'type', 'integer', 'min', 10, 'max', 200);
+    struct('name', 'maxepoch', 'type', 'integer', 'min', 10, 'max', 100);
     struct('name', 'weightcost', 'type', 'float', 'min', 0.0, 'max', 0.5);
     struct('name', 'pretrain_weightcost', 'type', 'float', 'min', 0.0, 'max', 0.5);
 };
@@ -39,7 +40,7 @@ for i = 1:50
 
   % Run rbm pretraining on the unlabeled data
   [hidbiases, vishid] = rbmfun(...
-      [double(data); unlabeleddata], job.numhid, job.pretrain_weightcost, job.pretrain_maxepoch, job.epsilon, job.momentum);
+      [double(data); unlabeleddata], job.numhid, job.pretrain_weightcost, job.pretrain_maxepoch, job.epsilon, job.momentum, job.pretrain);
 
   % Now perform classification using backprop
   w_class = 0.01.*randn(size(vishid,2)+1, size(targets,2)); restart = 1;
