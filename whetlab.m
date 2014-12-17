@@ -335,9 +335,6 @@ classdef whetlab
         try
             experiment_id = self.client.create(name, description, settings);
         catch err
-	    err
-	    err.identifier
-	    err.message
             % Resume, unless got a ConnectionError
             if resume && strfind(err.message, 'already exists')
                 % This experiment was just already created - race condition.
