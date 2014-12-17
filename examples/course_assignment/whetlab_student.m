@@ -3,12 +3,12 @@ addpath(genpath('../..'));
 % Define parameters to optimize
 parameters = {
     struct('name', 'numhid', 'type', 'integer', 'min', 10, 'max', 100);
-    struct('name', 'epsilon', 'type', 'float', 'min', 0.01, 'max',  0.1);
-    struct('name', 'momentum', 'type', 'float', 'min', 0.5, 'max', 0.9)
-    struct('name', 'pretrain_maxepoch', 'type', 'integer', 'min', 0, 'max', 200);
-    struct('name', 'maxepoch', 'type', 'integer', 'min', 5, 'max', 100);
-    struct('name', 'weightcost', 'type', 'float', 'min', 0.0, 'max', 0.2);
-    struct('name', 'pretrain_weightcost', 'type', 'float', 'min', 0.0, 'max', 0.2);
+    struct('name', 'epsilon', 'type', 'float', 'min', 0.001, 'max',  0.1);
+    struct('name', 'momentum', 'type', 'float', 'min', 0.5, 'max', 0.95)
+    struct('name', 'pretrain_maxepoch', 'type', 'integer', 'min', 1, 'max', 200);
+    struct('name', 'maxepoch', 'type', 'integer', 'min', 1, 'max', 100);
+    struct('name', 'weightcost', 'type', 'float', 'min', 0.0, 'max', 1.0);
+    struct('name', 'pretrain_weightcost', 'type', 'float', 'min', 0.0, 'max', 0.1);
 };
 
 outcome.name = '# correct test examples';
@@ -49,4 +49,10 @@ for i = 1:50
   % The objective is the number of correct test examples
   scientist.update(job, 3000 - terrors);
 
+  % Also tell whetlab about the best we've seen so far over epochs
+  [y,ind] = min(allterrors);
+  if ind ~= job.maxepoch && y < terrors
+    job.maxepoch = ind;
+    scientist.update(job, 3000 - y);
+  end
 end
