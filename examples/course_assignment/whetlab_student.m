@@ -7,8 +7,8 @@ parameters = {
     struct('name', 'momentum', 'type', 'float', 'min', 0.5, 'max', 0.9)
     struct('name', 'pretrain_maxepoch', 'type', 'integer', 'min', 0, 'max', 100);
     struct('name', 'maxepoch', 'type', 'integer', 'min', 5, 'max', 100);
-    struct('name', 'weightcost', 'type', 'float', 'min', 0.0, 'max', 0.5);
-    struct('name', 'pretrain_weightcost', 'type', 'float', 'min', 0.0, 'max', 0.5);
+    struct('name', 'weightcost', 'type', 'float', 'min', 0.0, 'max', 1.0);
+    struct('name', 'pretrain_weightcost', 'type', 'float', 'min', 0.0, 'max', 1.0);
 };
 
 outcome.name = '# correct test examples';
@@ -35,7 +35,7 @@ for i = 1:50
 
   % Set the random seed to something fixed to limit
   % noise from random initialization  
-  RandStream.setGlobalStream(RandStream('mt19937ar','seed', 123456));
+  RandStream.setGlobalStream(RandStream('mt19937ar','seed', 1234567));
 
   % Run rbm pretraining on the unlabeled data
   [hidbiases, vishid] = rbmfun(...
