@@ -145,7 +145,17 @@ classdef whetlab
                         equal = false;
                     end
                 else
-                    if b.(fa{i}) ~= a.(fa{i})
+                    if isstr(b.(fa{i}))
+                        if isstr(a.(fa{i}))
+                            if strcmp(b.(fa{i}), a.(fa{i}))
+                                equal = true;
+                            else
+                                equal = false;
+                            end
+                        else
+                            equal = false;
+                        end                                
+                    elseif b.(fa{i}) ~= a.(fa{i})
                         equal = false;
                     end
                 end
