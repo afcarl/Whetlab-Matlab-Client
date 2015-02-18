@@ -133,15 +133,15 @@ classdef SimpleREST
         more_pages = true;
         experiment_id = -1;
         found = false;
-        while more_pages
-            rest_exps = self.client.experiments().get(struct('query',struct('page',page))).body;
-        
-            % Check if more pages to come
-            more_pages = ~isempty(rest_exps.('next'));
-            page = page + 1;
 
+        while more_pages
+            rest_exps = self.client.experiments().get(struct('query',struct('page', page, 'page_size', self.INF_PAGE_SIZE))).body;
+            % Check if more pages to come
+            more_pages = ~isempty(rest_exps.('next'));            
+            page = page + 1;
+            
             % Find in current page whether we find the experiment we are looking for
-            rest_exps = rest_exps.results;                
+            rest_exps = rest_exps.results;
             for i = 1:numel(rest_exps)
                 expt = rest_exps{i};
                 if (strcmp(expt.('name'),name) == 1)
