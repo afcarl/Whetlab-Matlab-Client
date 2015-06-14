@@ -941,7 +941,7 @@ classdef whetlab
         for i = 1:numel(ids)
             params = loadjson(self.ids_to_param_values.get(ids(i)));
             for j = 1:numel(param_names)
-                row(j) = params.(param_names{j});
+                row{j} = params.(param_names{j});
             end
             param_vals = [param_vals; [row, y(i)]];
         end
